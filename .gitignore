@@ -1,0 +1,170 @@
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.pyd
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ─── Environment & Secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+*.pem
+*.key
+secrets/
+
+# ─── Machine Learning & Data Science ─────────────────────────────────────────
+# Model weights & checkpoints
+*.pt
+*.pth
+*.ckpt
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.onnx
+*.pb
+*.tflite
+*.mlmodel
+*.safetensors
+runs/
+checkpoints/
+saved_models/
+model_weights/
+
+# Datasets & large data files
+data/raw/
+data/processed/
+data/external/
+data/interim/
+*.csv
+*.parquet
+*.feather
+*.arrow
+*.jsonl
+*.npy
+*.npz
+
+# Optuna study files
+*.db
+optuna_studies/
+
+# Jupyter / Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+notebooks/.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# MLflow / Experiment tracking
+mlruns/
+mlflow.db
+wandb/
+lightning_logs/
+
+# ─── FastAPI / Uvicorn ────────────────────────────────────────────────────────
+*.log
+logs/
+*.pid
+
+# Alembic (keep versions/ but ignore temp)
+alembic/versions/__pycache__/
+
+# ─── Node / React Native / Mobile ─────────────────────────────────────────────
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/.metro-cache/
+mobile/*.jks
+mobile/*.p8
+mobile/*.p12
+mobile/*.mobileprovision
+mobile/*.orig.*
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/ios/Pods/
+mobile/ios/build/
+mobile/.xcode.env.local
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+.docker/
+
+# ─── IDE & Editors ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Testing & Coverage ───────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+test-results/
+junit.xml
+
+# ─── Type Checking & Linting ──────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pytype/
+
+# ─── Build & Distribution ─────────────────────────────────────────────────────
+site/
+docs/_build/
+*.spec
+
+# ─── Project-specific ignores ─────────────────────────────────────────────────
+Makefile
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+*.bak
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/

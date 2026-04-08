@@ -1,0 +1,90 @@
+# Hyperparameters for all models
+# Used by training pipeline; can be overridden via Optuna tuning
+
+random_forest:
+  n_estimators: 300
+  max_depth: 12
+  min_samples_leaf: 5
+  n_jobs: -1
+  random_state: 42
+
+xgboost:
+  n_estimators: 500
+  learning_rate: 0.05
+  max_depth: 6
+  subsample: 0.8
+  colsample_bytree: 0.8
+  reg_alpha: 0.1
+  reg_lambda: 1.0
+  random_state: 42
+  n_jobs: -1
+
+lightgbm:
+  n_estimators: 500
+  learning_rate: 0.05
+  num_leaves: 63
+  max_depth: -1
+  subsample: 0.8
+  colsample_bytree: 0.8
+  reg_alpha: 0.1
+  reg_lambda: 1.0
+  random_state: 42
+  n_jobs: -1
+
+prophet:
+  changepoint_prior_scale: 0.05
+  seasonality_prior_scale: 10.0
+  holidays_prior_scale: 10.0
+  seasonality_mode: multiplicative
+  yearly_seasonality: true
+  weekly_seasonality: true
+  daily_seasonality: false
+
+lstm:
+  hidden_size: 128
+  num_layers: 2
+  dropout: 0.2
+  sequence_length: 14
+  batch_size: 64
+  learning_rate: 0.001
+  epochs: 100
+  patience: 15
+
+tcn:
+  num_channels: [64, 128, 128, 64]
+  kernel_size: 3
+  dropout: 0.2
+  num_heads: 4
+  sequence_length: 14
+  batch_size: 64
+  learning_rate: 0.001
+  epochs: 100
+  patience: 15
+
+transformer:
+  d_model: 128
+  nhead: 4
+  num_encoder_layers: 3
+  dim_feedforward: 256
+  dropout: 0.1
+  sequence_length: 14
+  batch_size: 64
+  learning_rate: 0.0005
+  epochs: 100
+  patience: 15
+
+# Optuna hyperparameter search settings
+optuna:
+  n_trials: 50
+  timeout: 3600  # seconds
+  direction: minimize  # minimize RMSE
+
+# Train/val/test split
+data_split:
+  test_size: 0.15
+  val_size: 0.15
+  # Remaining 70% used for training
+  # Split is chronological (no random shuffle for time series)
+
+# Minimum data points required to train a model per vegetable
+min_training_samples: 180

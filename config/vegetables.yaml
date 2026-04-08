@@ -1,0 +1,104 @@
+# Chennai major vegetables — name, aliases used in various datasets
+vegetables:
+  - name: tomato
+    aliases: [Tomato, TOMATO, "Tomato(Desi)", "Tomato Big(Hybrid)"]
+    unit: kg
+    typical_price_range: [10, 120]
+
+  - name: onion
+    aliases: [Onion, ONION, "Onion Big", "Onion Small", "Onion Green"]
+    unit: kg
+    typical_price_range: [10, 100]
+
+  - name: potato
+    aliases: [Potato, POTATO, "Potato(Desi)", "Potato(P.Hills)"]
+    unit: kg
+    typical_price_range: [15, 80]
+
+  - name: brinjal
+    aliases: [Brinjal, BRINJAL, "Brinjal Round", "Brinjal Long"]
+    unit: kg
+    typical_price_range: [20, 100]
+
+  - name: ladies_finger
+    aliases: ["Ladies Finger", "Ladiesfinger", LADIESFINGER, "Bhendi", "Okra"]
+    unit: kg
+    typical_price_range: [30, 120]
+
+  - name: beans
+    aliases: [Beans, BEANS, "French Beans", "Cluster Beans"]
+    unit: kg
+    typical_price_range: [30, 150]
+
+  - name: cabbage
+    aliases: [Cabbage, CABBAGE, "Cabbage(Loose)"]
+    unit: kg
+    typical_price_range: [10, 60]
+
+  - name: carrot
+    aliases: [Carrot, CARROT, "Carrot(Local)"]
+    unit: kg
+    typical_price_range: [20, 100]
+
+  - name: cauliflower
+    aliases: [Cauliflower, CAULIFLOWER]
+    unit: kg
+    typical_price_range: [20, 120]
+
+  - name: bitter_gourd
+    aliases: ["Bitter Gourd", "Bittergourd", BITTERGOURD, "Karela"]
+    unit: kg
+    typical_price_range: [30, 120]
+
+  - name: bottle_gourd
+    aliases: ["Bottle Gourd", "Bottlegourd", BOTTLEGOURD, "Lauki"]
+    unit: kg
+    typical_price_range: [15, 60]
+
+  - name: ridge_gourd
+    aliases: ["Ridge Gourd", "Ridgegourd", RIDGEGOURD, "Turai"]
+    unit: kg
+    typical_price_range: [20, 80]
+
+  - name: snake_gourd
+    aliases: ["Snake Gourd", "Snakegourd", SNAKEGOURD]
+    unit: kg
+    typical_price_range: [20, 80]
+
+  - name: drumstick
+    aliases: [Drumstick, DRUMSTICK, "Muringakkai"]
+    unit: kg
+    typical_price_range: [40, 200]
+
+  - name: raw_banana
+    aliases: ["Raw Banana", "Green Banana", "Plantain", BANANA]
+    unit: kg
+    typical_price_range: [20, 80]
+
+  - name: tapioca
+    aliases: [Tapioca, TAPIOCA, "Cassava", "Maravalli"]
+    unit: kg
+    typical_price_range: [15, 50]
+
+  - name: green_chilli
+    aliases: ["Green Chilli", "Greenchilli", GREENCHILLI, "Chilli Green"]
+    unit: kg
+    typical_price_range: [40, 300]
+
+  - name: ginger
+    aliases: [Ginger, GINGER, "Ginger(Green)", "Dry Ginger"]
+    unit: kg
+    typical_price_range: [50, 300]
+
+  - name: garlic
+    aliases: [Garlic, GARLIC, "Garlic Dry"]
+    unit: kg
+    typical_price_range: [80, 400]
+
+  - name: coriander
+    aliases: [Coriander, CORIANDER, "Coriander Leaves", "Kothamalli"]
+    unit: bunch
+    typical_price_range: [5, 50]
+
+# Canonical name lookup (alias → name)
+# Built programmatically from above at runtime

@@ -1,0 +1,69 @@
+# Tamil Nadu / Indian festivals that cause vegetable price spikes
+# Format: MM-DD (recurring annual) or YYYY-MM-DD (fixed one-time)
+# window_days: price impact starts N days before the festival
+festivals:
+  - name: Pongal
+    type: annual
+    month: 1
+    day: 14
+    window_days: 7
+    impact: high
+
+  - name: Diwali
+    type: variable  # falls on different dates each year; handled via `holidays` library
+    holiday_key: Diwali
+    window_days: 10
+    impact: high
+
+  - name: Navratri
+    type: variable
+    holiday_key: Navratri
+    window_days: 9
+    impact: medium
+
+  - name: Ramadan
+    type: variable
+    holiday_key: Eid al-Fitr
+    window_days: 30
+    impact: medium
+
+  - name: Tamil New Year
+    type: annual
+    month: 4
+    day: 14
+    window_days: 5
+    impact: medium
+
+  - name: Karthigai Deepam
+    type: variable
+    holiday_key: Karthigai Deepam
+    window_days: 5
+    impact: medium
+
+  - name: Christmas
+    type: annual
+    month: 12
+    day: 25
+    window_days: 5
+    impact: low
+
+  - name: New Year
+    type: annual
+    month: 1
+    day: 1
+    window_days: 3
+    impact: low
+
+  - name: Independence Day
+    type: annual
+    month: 8
+    day: 15
+    window_days: 2
+    impact: low
+
+  - name: Republic Day
+    type: annual
+    month: 1
+    day: 26
+    window_days: 2
+    impact: low

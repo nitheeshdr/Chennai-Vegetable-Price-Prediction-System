@@ -1,0 +1,61 @@
+# Chennai and Tamil Nadu vegetable markets
+markets:
+  - id: koyambedu
+    name: Koyambedu
+    full_name: "Koyambedu Wholesale Market Complex"
+    city: Chennai
+    state: "Tamil Nadu"
+    type: wholesale
+    latitude: 13.0717
+    longitude: 80.1925
+    is_primary: true
+
+  - id: madurai
+    name: Madurai
+    full_name: "Mattuthavani Market, Madurai"
+    city: Madurai
+    state: "Tamil Nadu"
+    type: wholesale
+    latitude: 9.9252
+    longitude: 78.1198
+    is_primary: false
+
+  - id: coimbatore
+    name: Coimbatore
+    full_name: "Ukkadam Market, Coimbatore"
+    city: Coimbatore
+    state: "Tamil Nadu"
+    type: wholesale
+    latitude: 11.0018
+    longitude: 76.9628
+    is_primary: false
+
+  - id: salem
+    name: Salem
+    full_name: "Suramangalam Market, Salem"
+    city: Salem
+    state: "Tamil Nadu"
+    type: wholesale
+    latitude: 11.6643
+    longitude: 78.1460
+    is_primary: false
+
+  - id: trichy
+    name: Trichy
+    full_name: "Ariyamangalam Market, Trichy"
+    city: Tiruchirappalli
+    state: "Tamil Nadu"
+    type: wholesale
+    latitude: 10.8050
+    longitude: 78.6856
+    is_primary: false
+
+# Retail market multiplier (retail price ≈ wholesale × multiplier)
+retail_markup_factor: 1.35
+
+# Chennai weather station coordinates
+weather_location:
+  city: Chennai
+  latitude: 13.0827
+  longitude: 80.2707
+  openweather_id: 1264527
