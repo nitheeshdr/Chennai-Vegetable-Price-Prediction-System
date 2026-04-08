@@ -1,312 +1,276 @@
-# 🥦 Chennai Vegetable Price Prediction System
+<div align="center">
 
-> An end-to-end ML platform that forecasts next-day vegetable prices across Chennai markets, featuring a multi-model ensemble, computer vision vegetable identification, real-time alerts, and a REST API — backed by a React Native mobile app.
+# 🥦 VegPrice AI
+### Chennai Vegetable Price Prediction System
 
----
+*Predict. Scan. Alert. Trade smarter.*
 
-## 📑 Table of Contents
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.3-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](LICENSE)
 
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Project Structure](#project-structure)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Environment Variables](#environment-variables)
-- [Usage](#usage)
-  - [Running the API](#running-the-api)
-  - [Training Models](#training-models)
-  - [Evaluating Models](#evaluating-models)
-  - [Mobile App](#mobile-app)
-- [API Reference](#api-reference)
-- [ML Models](#ml-models)
-- [Configuration](#configuration)
-- [Development](#development)
-- [License](#license)
+<br/>
+
+> An end-to-end ML platform that forecasts next-day vegetable prices across Chennai markets —  
+> powered by a 7-model ensemble, YOLOv8 vision scanning, real-time price alerts, and a React Native app.
+
+<br/>
+
+[🚀 Quick Start](#-quick-start) · [📖 API Docs](#-api-reference) · [🧠 ML Models](#-ml-models) · [📱 Mobile App](#-mobile-app)
+
+</div>
 
 ---
 
-## Overview
-
-The **Chennai Vegetable Price Prediction System** (`vegprice`) helps farmers, traders, and consumers make data-driven decisions by predicting the next-day retail prices of 20+ vegetables across Chennai's major markets (Koyambedu, Thiruvallur, etc.).
-
-Prices are influenced by seasonal cycles, festivals, rainfall, supply-chain disruptions, and market demand. This system captures all these factors through a multi-model ensemble combining classical ML, gradient boosting, time-series models, and deep learning — then exposes everything through a production-grade FastAPI backend and a cross-platform React Native mobile app.
-
----
-
-## Features
-
-| Feature | Description |
-|---|---|
-| 🔮 **Price Prediction** | Next-day price forecast for 20+ vegetables per market |
-| 📈 **Trend Analytics** | Historical price trends, seasonality, and market comparisons |
-| 📅 **Forecast Explorer** | Multi-day ahead forecasts with confidence intervals |
-| 📸 **Vision Scan** | Upload a vegetable photo → get identified name + current price |
-| 🔔 **Price Alerts** | Subscribe to alerts when a vegetable crosses a price threshold |
-| 🏪 **Market Comparison** | Compare prices across multiple Chennai markets in real-time |
-| 🔄 **Auto-Retraining** | Scheduled daily incremental retraining pipeline |
-| 📊 **Prometheus Metrics** | Built-in observability via `/metrics` endpoint |
-
----
-
-## Architecture
+## ✨ What It Does
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   React Native App                       │
-│         (Expo · price screens · vision scanner)          │
-└────────────────────────┬────────────────────────────────┘
-                         │ HTTPS / REST
-┌────────────────────────▼────────────────────────────────┐
-│                   FastAPI Backend                        │
-│  /predict  /vision  /prices  /forecast  /alerts  /analytics│
-│  Rate Limiting · CORS · Auth · Prometheus Metrics        │
-└──────┬─────────────────┬────────────────────────────────┘
-       │                 │
-┌──────▼──────┐  ┌───────▼───────────────────────────────┐
-│  Supabase   │  │         ML Inference Pipeline           │
-│  PostgreSQL │  │  Ensemble → XGBoost / LightGBM /       │
-│  + Redis    │  │  Prophet / LSTM / Transformer / TCN    │
-└─────────────┘  └────────────────────────────────────────┘
-                                │
-                 ┌──────────────▼──────────────────────┐
-                 │        Vision Module (YOLOv8)         │
-                 │     Vegetable Detection & ID          │
-                 └─────────────────────────────────────┘
+📸 Snap a vegetable photo  →  🤖 AI identifies it  →  💰 Shows today's price + tomorrow's forecast
+```
+
+| | Feature | Description |
+|---|---|---|
+| 🔮 | **Price Prediction** | Next-day price forecast for 20+ vegetables across Chennai markets |
+| 📸 | **Vision Scan** | Upload a vegetable photo → instant ID + price via YOLOv8 |
+| 📈 | **Trend Analytics** | Historical trends, seasonality charts, market comparisons |
+| 📅 | **Multi-day Forecast** | 7-day ahead forecasts with confidence intervals |
+| 🔔 | **Smart Alerts** | Subscribe to threshold alerts — get notified when prices spike |
+| 🏪 | **Market Comparison** | Compare prices across Koyambedu, Thiruvallur & more |
+| 🔄 | **Auto-Retraining** | Scheduled daily incremental retraining pipeline |
+| 📊 | **Observability** | Built-in Prometheus metrics + structured logging via Loguru |
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   📱 React Native App (Expo)                 │
+│             Price Screens · Vision Scanner · Alerts          │
+└──────────────────────────┬──────────────────────────────────┘
+                           │  REST / HTTPS
+┌──────────────────────────▼──────────────────────────────────┐
+│                     ⚡ FastAPI Backend                        │
+│   /predict  /vision  /prices  /forecast  /alerts  /analytics │
+│     Rate Limiting (SlowAPI) · JWT Auth · CORS · Prometheus   │
+└──────┬───────────────────┬──────────────────────────────────┘
+       │                   │
+┌──────▼──────┐   ┌────────▼──────────────────────────────────┐
+│  🐘 Supabase │   │          🧠 ML Inference Pipeline           │
+│  PostgreSQL  │   │                                            │
+│  + asyncpg   │   │  ┌──────────┐   ┌──────────┐              │
+├──────────────┤   │  │ XGBoost  │   │ LightGBM │              │
+│  ⚡ Redis     │   │  │  Prophet │   │   LSTM   │  → Ensemble  │
+│  Cache Layer │   │  │    TCN   │   │ Transformer│             │
+└─────────────┘   │  └──────────┘   └──────────┘              │
+                  └────────────────────────────────────────────┘
+                                   │
+                  ┌────────────────▼────────────────────────────┐
+                  │          👁️ Vision Module (YOLOv8)            │
+                  │     Vegetable Detection · Classification      │
+                  └─────────────────────────────────────────────┘
 ```
 
 ---
 
-## Project Structure
+## 📁 Project Structure
+
+<details>
+<summary><b>Click to expand full directory tree</b></summary>
 
 ```
-model/
-├── api/                        # FastAPI application
-│   ├── main.py                 # App entry point, middleware, routers
-│   ├── config.py               # Pydantic settings (env-driven)
-│   ├── routers/                # Route handlers
-│   │   ├── predictions.py      # POST /predict
-│   │   ├── prices.py           # GET  /prices
-│   │   ├── forecast.py         # GET  /forecast
-│   │   ├── alerts.py           # POST /alerts
-│   │   ├── analytics.py        # GET  /analytics
-│   │   └── vision.py           # POST /vision/scan
-│   ├── services/               # Business logic layer
+agriculture-Price-Prediction/
+│
+├── 🌐 api/                          # FastAPI application
+│   ├── main.py                      # App entry, middleware, routers
+│   ├── config.py                    # Pydantic settings (env-driven)
+│   ├── routers/                     # Route handlers
+│   │   ├── predictions.py           # POST /predict
+│   │   ├── prices.py                # GET  /prices
+│   │   ├── forecast.py              # GET  /forecast
+│   │   ├── alerts.py                # POST /alerts
+│   │   ├── analytics.py             # GET  /analytics
+│   │   └── vision.py                # POST /vision/scan
+│   ├── services/                    # Business logic
 │   │   ├── prediction_service.py
 │   │   ├── price_service.py
 │   │   ├── alert_service.py
 │   │   ├── vision_service.py
 │   │   └── notification_service.py
-│   ├── schemas/                # Pydantic request/response models
-│   └── db/                     # Database session & helpers
+│   ├── schemas/                     # Pydantic request/response models
+│   └── db/                          # Async DB session + ORM models
 │
-├── src/                        # Core ML library
-│   ├── models/                 # Model implementations
-│   │   ├── base_model.py       # Abstract base class
-│   │   ├── baseline/           # Moving average, naive baselines
-│   │   ├── boosting/           # XGBoost, LightGBM
-│   │   ├── timeseries/         # Prophet
-│   │   ├── deep_learning/      # LSTM, TCN, Transformer
-│   │   └── ensemble/           # Stacking / voting ensemble
+├── 🧠 src/                          # Core ML library
+│   ├── models/
+│   │   ├── baseline/                # Linear Regression, Random Forest
+│   │   ├── boosting/                # XGBoost, LightGBM
+│   │   ├── timeseries/              # Prophet, LSTM
+│   │   ├── deep_learning/           # TCN, Transformer
+│   │   └── ensemble/                # Weighted stacking ensemble
 │   ├── pipeline/
-│   │   ├── training_pipeline.py   # Full training workflow
-│   │   ├── inference_pipeline.py  # Real-time inference
-│   │   └── retraining.py          # Incremental daily retraining
-│   ├── data/                   # Data loaders & feature engineering
-│   ├── evaluation/             # Metrics, comparison reports
-│   └── vision/                 # YOLOv8-based vegetable classifier
+│   │   ├── training_pipeline.py     # Full training workflow
+│   │   ├── inference_pipeline.py    # Real-time inference
+│   │   └── retraining.py            # Incremental daily retraining
+│   ├── data/                        # Loaders, feature engineering
+│   ├── evaluation/                  # Metrics, comparison reports
+│   └── vision/                      # YOLOv8 classifier + detector
 │
-├── config/
-│   ├── vegetables.yaml         # 20 vegetables, aliases, price ranges
-│   ├── markets.yaml            # Chennai market definitions
-│   ├── festivals.yaml          # Festival calendar (affects prices)
-│   └── model_params.yaml       # Hyperparameters for all models
+├── ⚙️ config/
+│   ├── vegetables.yaml              # 20 vegetables, aliases, price ranges
+│   ├── markets.yaml                 # Chennai market definitions
+│   ├── festivals.yaml               # Festival calendar (price signals)
+│   └── model_params.yaml            # Hyperparameters for all 7 models
 │
-├── scripts/
-│   ├── download_data.py        # Fetch historical data (Agmarknet, etc.)
-│   ├── train_models.py         # Kick off training pipeline
-│   ├── evaluate_models.py      # Model comparison report
-│   └── seed_database.py        # Seed Supabase with historical prices
+├── 📜 scripts/
+│   ├── download_data.py             # Fetch historical data
+│   ├── train_models.py              # Kick off training pipeline
+│   ├── evaluate_models.py           # Model comparison report
+│   └── seed_database.py             # Seed Supabase with history
 │
-├── mobile/                     # React Native app (Expo)
-│   ├── package.json
-│   └── src/
-│
-├── deployment/
-│   └── nginx/                  # Nginx reverse proxy config
-│
-├── tests/                      # Pytest test suite
-├── notebooks/                  # EDA & experiment notebooks
-├── pyproject.toml              # Project metadata, ruff, black, mypy, pytest
-├── requirements.txt            # Production dependencies
-├── requirements-dev.txt        # Dev/test dependencies
-├── Makefile                    # Common task shortcuts
-└── .env.example                # Environment variable template
+├── 📱 mobile/                       # React Native app (Expo)
+├── 🚀 deployment/nginx/             # Nginx reverse proxy config
+├── 🧪 tests/                        # Pytest suite
+├── 📓 notebooks/                    # EDA & experiment notebooks
+├── pyproject.toml                   # ruff · black · mypy · pytest config
+├── requirements.txt                 # Production dependencies
+├── requirements-dev.txt             # Dev / test dependencies
+└── .env.example                     # Environment variable template
 ```
 
----
-
-## Tech Stack
-
-### Backend & ML
-| Layer | Technology |
-|---|---|
-| API Framework | FastAPI 0.111 + Uvicorn |
-| Database | Supabase (PostgreSQL + asyncpg) |
-| Cache | Redis |
-| ORM / Migrations | SQLAlchemy 2 (async) + Alembic |
-| Task Scheduling | APScheduler |
-| Rate Limiting | SlowAPI |
-| Observability | Prometheus + FastAPI Instrumentator |
-| Auth | python-jose (JWT) + passlib (bcrypt) |
-
-### Machine Learning
-| Category | Libraries |
-|---|---|
-| Data | pandas, numpy, scipy |
-| Classical ML | scikit-learn (Random Forest) |
-| Gradient Boosting | XGBoost, LightGBM |
-| Time Series | Prophet |
-| Deep Learning | PyTorch, Einops |
-| Computer Vision | Ultralytics YOLOv8, OpenCV, Albumentations |
-| HPO | Optuna |
-
-### Mobile
-| | |
-|---|---|
-| Framework | React Native + Expo |
-
-### Tooling
-| | |
-|---|---|
-| Linting & Formatting | Ruff, Black |
-| Type Checking | mypy |
-| Testing | Pytest + pytest-asyncio |
-| Python | 3.11+ |
+</details>
 
 ---
 
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - Python **3.11+**
-- Docker & Docker Compose (for local services)
-- Node.js **18+** and npm/yarn (for mobile app)
-- A [Supabase](https://supabase.com/) project (free tier works)
-- A Redis instance (or use the one in Docker Compose)
+- Docker & Docker Compose
+- Node.js **18+** (for mobile app)
+- A [Supabase](https://supabase.com) project (free tier works)
 
-### Installation
+### 1 — Clone & Install
 
 ```bash
-# 1. Clone the repository
-git clone <your-repo-url>
-cd model
+git clone https://github.com/nitheeshdr/agriculture-Price-Prediction.git
+cd agriculture-Price-Prediction
 
-# 2. Create and activate a virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
+# Create virtualenv
+python3 -m venv .venv && source .venv/bin/activate
 
-# 3. Install production dependencies
-make install
-
-# 4. Install dev/test dependencies
-make install-dev
-
-# 5. Copy environment template and fill in your values
-cp .env.example .env
+# Install dependencies
+pip install -r requirements.txt
+pip install -r requirements-dev.txt   # dev deps
 ```
 
-### Environment Variables
+### 2 — Configure Environment
 
-Copy `.env.example` to `.env` and configure the following:
+```bash
+cp .env.example .env
+# Edit .env with your Supabase, Redis, and API keys
+```
+
+<details>
+<summary><b>Required environment variables</b></summary>
 
 | Variable | Description | Example |
 |---|---|---|
 | `ENVIRONMENT` | `development` / `production` | `development` |
-| `DATABASE_URL` | Supabase PostgreSQL connection string | `postgresql+asyncpg://...` |
+| `DATABASE_URL` | Supabase async connection string | `postgresql+asyncpg://...` |
 | `SUPABASE_URL` | Your Supabase project URL | `https://xxx.supabase.co` |
-| `SUPABASE_KEY` | Supabase anon/service key | `eyJ...` |
+| `SUPABASE_KEY` | Supabase anon / service key | `eyJ...` |
 | `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |
-| `SECRET_KEY` | JWT signing secret | `your-very-secret-key` |
-| `KAGGLE_USERNAME` | Kaggle username (for data download) | `john_doe` |
+| `SECRET_KEY` | JWT signing secret | `your-secret-key` |
+| `KAGGLE_USERNAME` | Kaggle username (data download) | `johndoe` |
 | `KAGGLE_KEY` | Kaggle API key | `abc123` |
 
----
+</details>
 
-## Usage
-
-### Running the API
+### 3 — Start Services & API
 
 ```bash
-# Start backing services (PostgreSQL via Supabase + Redis) with Docker
-make up
+# Start PostgreSQL + Redis via Docker
+docker compose -f deployment/docker-compose.yml up -d
 
-# Start FastAPI in dev mode with hot-reload
-make api
-# → API available at http://localhost:8000
-# → Interactive docs at http://localhost:8000/docs
-# → Metrics at http://localhost:8000/metrics
+# Seed the database with historical prices
+python scripts/seed_database.py
+
+# Launch FastAPI (hot-reload)
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Training Models
-
-```bash
-# Step 1 — Download historical price data (last 3 years)
-make download
-
-# Step 2 — Seed the database with historical prices
-make seed
-
-# Step 3 — Run full training pipeline (all models, all vegetables)
-make train
-
-# Step 3b — Incremental retraining only on new data
-make retrain
-
-# Step 4 — Generate model evaluation report
-make evaluate
-```
-
-### Evaluating Models
-
-```bash
-make evaluate
-# Outputs a comparison table with RMSE, MAE, MAPE for each model + vegetable
-```
-
-### Mobile App
-
-```bash
-cd mobile
-npm install
-npx expo start
-# Scan QR code with Expo Go on your Android/iOS device
-```
+🎉 API live at **http://localhost:8000** · Docs at **http://localhost:8000/docs**
 
 ---
 
-## API Reference
+## 🧠 ML Models
 
-The full interactive API reference is available at **`/docs`** (Swagger UI) or **`/redoc`** when the server is running.
+The system trains **7 model types** per vegetable per market and combines them in a stacking ensemble.
 
-### Key Endpoints
+| Model | Type | Key Strength |
+|---|---|---|
+| **Random Forest** | Ensemble tree | Robust baseline, handles outliers well |
+| **XGBoost** | Gradient boosting | High accuracy, fast inference |
+| **LightGBM** | Gradient boosting | Speed + memory efficiency |
+| **Prophet** | Additive time series | Seasonality + festival/holiday effects |
+| **LSTM** | Deep learning (RNN) | Long-range sequential patterns |
+| **TCN** | Deep learning (CNN) | Parallel training, dilated convolutions |
+| **Transformer** | Deep learning (attention) | Complex multi-variate temporal patterns |
+| **🏆 Ensemble** | Weighted stacking | Best overall accuracy across all vegetables |
+
+### Training Pipeline
+
+```bash
+# Download last 3 years of price data
+python scripts/download_data.py --years 3
+
+# Train all models for all vegetables
+python scripts/train_models.py
+
+# Incremental retrain (new data only)
+python scripts/train_models.py --incremental
+
+# Generate comparison report (RMSE · MAE · MAPE)
+python scripts/evaluate_models.py
+```
+
+### Data Split *(chronological — no shuffle)*
+
+```
+├── 70% ──── Training
+├── 15% ──── Validation
+└── 15% ──── Test
+```
+
+Hyperparameters are managed in `config/model_params.yaml` and further tuned with **Optuna** (50 trials / 1-hour budget).
+
+---
+
+## 📖 API Reference
+
+> Full interactive docs: **`/docs`** (Swagger) · **`/redoc`** (ReDoc)
+
+### Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/` | API info & links |
 | `GET` | `/health` | Health check |
-| `POST` | `/predict` | Predict next-day price for a vegetable |
-| `GET` | `/prices` | Current / historical prices |
+| `POST` | `/predict` | Next-day price prediction |
+| `GET` | `/prices` | Current & historical prices |
 | `GET` | `/forecast` | Multi-day price forecast |
-| `POST` | `/vision/scan` | Identify vegetable from image + get price |
+| `POST` | `/vision/scan` | Identify vegetable from image + price |
 | `POST` | `/alerts` | Create a price threshold alert |
 | `GET` | `/analytics` | Trend analytics & market comparison |
-| `GET` | `/metrics` | Prometheus metrics scrape endpoint |
+| `GET` | `/metrics` | Prometheus scrape endpoint |
 
-### Example — Price Prediction
+### Examples
+
+<details>
+<summary><b>POST /predict — Price prediction</b></summary>
 
 ```bash
 curl -X POST http://localhost:8000/predict \
@@ -329,7 +293,10 @@ curl -X POST http://localhost:8000/predict \
 }
 ```
 
-### Example — Vision Scan
+</details>
+
+<details>
+<summary><b>POST /vision/scan — Vegetable image scan</b></summary>
 
 ```bash
 curl -X POST http://localhost:8000/vision/scan \
@@ -341,96 +308,124 @@ curl -X POST http://localhost:8000/vision/scan \
   "identified_vegetable": "brinjal",
   "confidence": 0.94,
   "current_price": 55.0,
+  "predicted_tomorrow": 58.5,
   "unit": "kg",
   "market": "koyambedu"
 }
 ```
 
----
-
-## ML Models
-
-The system trains and maintains **7 model types** per vegetable per market, then combines them in a stacking ensemble.
-
-| Model | Type | Key Strength |
-|---|---|---|
-| **Random Forest** | Ensemble tree | Robust baseline, handles outliers |
-| **XGBoost** | Gradient boosting | High accuracy, fast inference |
-| **LightGBM** | Gradient boosting | Speed + memory efficiency |
-| **Prophet** | Additive time series | Seasonality + holiday effects |
-| **LSTM** | Deep learning (RNN) | Long-range sequential patterns |
-| **TCN** | Deep learning (CNN) | Parallel training, dilated convolutions |
-| **Transformer** | Deep learning (attention) | Complex temporal dependencies |
-| **Ensemble** | Stacking | Best overall accuracy |
-
-### Hyperparameter Tuning
-
-All model hyperparameters are defined in `config/model_params.yaml`. Models are further tuned with **Optuna** (50 trials / 1-hour budget) during training.
-
-### Data Split
-
-- **70%** training (chronological — no random shuffle)
-- **15%** validation
-- **15%** test
+</details>
 
 ---
 
-## Configuration
+## 📱 Mobile App
 
-All configuration lives in the `config/` directory and is version-controlled (no secrets).
-
-| File | Purpose |
-|---|---|
-| `vegetables.yaml` | 20 supported vegetables with aliases and typical price ranges |
-| `markets.yaml` | Chennai market definitions (name, location, type) |
-| `festivals.yaml` | Festival calendar used as price-influencing features |
-| `model_params.yaml` | Hyperparameters for all 7 model types + Optuna settings |
-
----
-
-## Development
-
-### Common Commands
+Built with **React Native + Expo**, the mobile app surfaces all API features on Android & iOS.
 
 ```bash
-make help          # Show all available commands
+cd mobile
+npm install
+npx expo start
+# Scan QR with Expo Go on your device
+```
+
+**Screens:** Home · Price Forecast · Vision Scanner · Analytics/Trends · Alerts
+
+---
+
+## 🛠️ Development
+
+### All Commands
+
+```bash
+make help          # List all available commands
 make install       # Install production deps
 make install-dev   # Install dev/test deps
-make api           # Run FastAPI dev server
+make api           # Start FastAPI dev server
 make train         # Full model training
-make evaluate      # Model evaluation report
-make test          # Run pytest suite with coverage
+make retrain       # Incremental retraining
+make evaluate      # Model comparison report
+make test          # Run pytest with coverage
 make lint          # Ruff + Black auto-fix
-make clean         # Remove __pycache__, processed data
+make seed          # Seed Supabase database
+make clean         # Remove __pycache__, build artifacts
 ```
 
 ### Running Tests
 
 ```bash
-make test
-# or
 pytest tests/ -v --cov=src --cov=api --cov-report=term-missing
 ```
 
-### Code Style
+### Code Quality
 
-This project enforces:
-- **Ruff** for linting (line length: 100, Python 3.11 target)
-- **Black** for formatting (line length: 100)
-- **mypy** for type checking
-
-Run all checks at once:
 ```bash
-make lint
+ruff check src/ api/ scripts/ --fix   # Lint
+black src/ api/ scripts/              # Format
+mypy src/ api/                        # Type check
 ```
 
----
-
-## License
-
-This project is proprietary. All rights reserved.
+> **Style:** Line length 100 · Python 3.11 target · All enforced via `pyproject.toml`
 
 ---
 
-<p align="center">Built for Chennai's vegetable markets · Powered by Python 3.11 + FastAPI + PyTorch</p>
-# agriculture-Price-Prediction
+## 🥦 Supported Vegetables
+
+<details>
+<summary><b>20 vegetables tracked across Chennai markets</b></summary>
+
+| Vegetable | Unit | Typical Range (₹/kg) |
+|---|---|---|
+| Tomato | kg | ₹10 – ₹120 |
+| Onion | kg | ₹10 – ₹100 |
+| Potato | kg | ₹15 – ₹80 |
+| Brinjal | kg | ₹20 – ₹100 |
+| Ladies Finger | kg | ₹30 – ₹120 |
+| Beans | kg | ₹30 – ₹150 |
+| Cabbage | kg | ₹10 – ₹60 |
+| Carrot | kg | ₹20 – ₹100 |
+| Cauliflower | kg | ₹20 – ₹120 |
+| Bitter Gourd | kg | ₹30 – ₹120 |
+| Bottle Gourd | kg | ₹15 – ₹60 |
+| Ridge Gourd | kg | ₹20 – ₹80 |
+| Snake Gourd | kg | ₹20 – ₹80 |
+| Drumstick | kg | ₹40 – ₹200 |
+| Raw Banana | kg | ₹20 – ₹80 |
+| Tapioca | kg | ₹15 – ₹50 |
+| Green Chilli | kg | ₹40 – ₹300 |
+| Ginger | kg | ₹50 – ₹300 |
+| Garlic | kg | ₹80 – ₹400 |
+| Coriander | bunch | ₹5 – ₹50 |
+
+</details>
+
+---
+
+## 📦 Tech Stack
+
+<div align="center">
+
+| Layer | Technology |
+|---|---|
+| API | FastAPI · Uvicorn · SlowAPI · python-jose |
+| Database | Supabase · PostgreSQL · asyncpg · SQLAlchemy 2 · Alembic |
+| Cache | Redis |
+| Scheduling | APScheduler |
+| ML | scikit-learn · XGBoost · LightGBM · Prophet · PyTorch |
+| Vision | Ultralytics YOLOv8 · OpenCV · Albumentations |
+| HPO | Optuna |
+| Mobile | React Native · Expo |
+| Observability | Prometheus · Loguru |
+| Tooling | Ruff · Black · mypy · Pytest |
+
+</div>
+
+---
+
+<div align="center">
+
+Built with ❤️ for Chennai's vegetable markets
+
+**[⬆ Back to top](#-vegprice-ai)**
+
+</div>
