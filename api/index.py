@@ -146,6 +146,9 @@ def _dispatch(path: str, qs: dict) -> tuple:
             return _err(f"No price data for '{veg}'", 404)
         return _ok(p)
 
+    if path == "/vegetables":
+        return _ok({"vegetables": VEGETABLES, "count": len(VEGETABLES)})
+
     if path == "/get-current-price":
         veg_raw = q("vegetable", "")
         market = q("market")
