@@ -20,10 +20,7 @@ SUPABASE_KEY = (
     os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     or os.environ.get("SUPABASE_ANON_KEY", "")
 )
-OPENROUTER_KEY = os.environ.get(
-    "OPENROUTER_API_KEY",
-    "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",
-)
+OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
 VEGETABLES = [
     "tomato", "onion", "potato", "garlic", "ginger", "green_chilli",
@@ -175,7 +172,7 @@ def _ai_predict(veg: str, market: Optional[str]) -> dict:
     )
 
     payload = json.dumps({
-        "model": "openai/gpt-4o-mini",
+        "model": "mistralai/mistral-7b-instruct:free",
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 250,
         "temperature": 0.2,
@@ -216,6 +213,83 @@ def _ai_predict(veg: str, market: Optional[str]) -> dict:
     }
 
 
+def _scan_image(image_b64: str) -> dict:
+    """Identify vegetable from base64 image using free vision model."""
+    if not OPENROUTER_KEY:
+        raise ValueError("OPENROUTER_API_KEY not set")
+
+    prompt = (
+        "You are a vegetable recognition expert. Look at this image and identify the vegetable.\n"
+        "Respond with ONLY valid JSON, no extra text:\n"
+        '{"vegetable": "<name_in_english_lowercase_underscored>", '
+        '"confidence": <0.0-1.0>, '
+        '"top_k": [{"vegetable": "<name>", "confidence": <0.0-1.0>}, ...]}\n'
+        "Use names like: tomato, onion, potato, garlic, ginger, green_chilli, brinjal, "
+        "cabbage, carrot, cauliflower, beans, bitter_gourd, bottle_gourd, coriander, "
+        "drumstick, ladies_finger, raw_banana, tapioca. "
+        "If unsure, still pick the closest match."
+    )
+
+    payload = json.dumps({
+        "model": "meta-llama/llama-3.2-11b-vision-instruct:free",
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
+                {"type": "text", "text": prompt},
+            ],
+        }],
+        "max_tokens": 200,
+        "temperature": 0.1,
+    }).encode()
+
+    req = urllib.request.Request(
+        "https://openrouter.ai/api/v1/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {OPENROUTER_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://chennai-vegetable-price-prediction.vercel.app",
+            "X-Title": "Chennai Vegetable Price AI",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=25) as resp:
+        result = json.loads(resp.read())
+
+    content = result["choices"][0]["message"]["content"].strip()
+    m = re.search(r"\{.*\}", content, re.DOTALL)
+    scan = json.loads(m.group() if m else content)
+
+    veg = scan.get("vegetable", "unknown")
+    confidence = float(scan.get("confidence", 0.5))
+    top_k = scan.get("top_k", [{"vegetable": veg, "confidence": confidence}])
+
+    # Get price + prediction for detected vegetable
+    current_price = None
+    prediction = None
+    if veg != "unknown":
+        try:
+            rows = _rest("price_records", {
+                "vegetable_name": f"eq.{veg}",
+                "order": "date.desc", "limit": "1",
+                "select": "date,market_name,min_price,max_price,modal_price",
+            })
+            if rows:
+                current_price = {**rows[0], "vegetable": veg, "unit": "Rs/kg"}
+        except Exception:
+            pass
+        prediction = _predict(veg, None, days=1)
+
+    return {
+        "vegetable_detected": veg,
+        "confidence": confidence,
+        "top_k": top_k,
+        "prediction": prediction,
+        "current_price": current_price,
+    }
+
+
 def _ok(data: object) -> tuple:
     return 200, json.dumps(data, ensure_ascii=False)
 
@@ -240,6 +314,18 @@ def _dispatch(path: str, qs: dict) -> tuple:
     if path == "/weather":
         try:
             return _ok(_get_weather())
+        except Exception as e:
+            return _err(str(e), 500)
+
+    if path == "/scan-image":
+        body = qs.get("__body__", [{}])[0]
+        image_b64 = body.get("image_base64", "") if isinstance(body, dict) else ""
+        if not image_b64:
+            return _err("image_base64 required", 400)
+        if not OPENROUTER_KEY:
+            return _err("OPENROUTER_API_KEY not configured on server", 503)
+        try:
+            return _ok(_scan_image(image_b64))
         except Exception as e:
             return _err(str(e), 500)
 
@@ -402,6 +488,22 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(parsed.query)
+        try:
+            status, body = _dispatch(parsed.path, qs)
+        except Exception as e:
+            status, body = 500, json.dumps({"error": str(e)})
+        self._respond(status, body)
+
+    def do_POST(self):
+        parsed = urllib.parse.urlparse(self.path)
+        length = int(self.headers.get("Content-Length", 0))
+        raw = self.rfile.read(length) if length else b"{}"
+        try:
+            data = json.loads(raw)
+        except Exception:
+            data = {}
+        # Inject parsed body into qs so _dispatch can read it
+        qs = {"__body__": [data]}
         try:
             status, body = _dispatch(parsed.path, qs)
         except Exception as e:

@@ -87,14 +87,20 @@ export const api = {
   },
 
   async scanImage(imageUri: string): Promise<ScanResponse> {
-    const formData = new FormData();
-    formData.append('file', {
-      uri: imageUri,
-      type: 'image/jpeg',
-      name: 'vegetable.jpg',
-    } as any);
-    const { data } = await apiClient.post('/scan-image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    // Convert image to base64 and send as JSON (Vercel doesn't support multipart well)
+    const response = await fetch(imageUri);
+    const blob = await response.blob();
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(',')[1]); // strip data:...;base64, prefix
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    const { data } = await apiClient.post('/scan-image', { image_base64: base64 }, {
+      timeout: 30000,
     });
     return data;
   },
