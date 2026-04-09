@@ -8,6 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, apiClient } from '../services/api';
+import { usePriceStore } from '../store/priceStore';
 import { C, SP, SHAPE } from '../theme';
 
 const VEGETABLES = [
@@ -21,6 +22,7 @@ type TestStatus    = 'idle' | 'testing' | 'ok' | 'fail';
 
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
+  const { fetchDashboard } = usePriceStore();
 
   const [status,     setStatus]     = useState<RefreshStatus>('idle');
   const [progress,   setProgress]   = useState(0);
@@ -79,6 +81,7 @@ export default function AdminScreen() {
     setLastRun(new Date().toLocaleString('en-IN'));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSnack('All AI predictions refreshed!');
+    fetchDashboard(); // sync Home screen with new AI prices
   };
 
   const confirmRun = () => Alert.alert(

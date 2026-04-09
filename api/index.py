@@ -52,6 +52,29 @@ def _rest(table: str, params: dict) -> list:
         return json.loads(resp.read())
 
 
+def _rest_insert(table: str, data: dict) -> None:
+    """Insert a row into Supabase. Silently ignores errors."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return
+    try:
+        payload = json.dumps(data).encode()
+        req = urllib.request.Request(
+            f"{SUPABASE_URL}/rest/v1/{table}",
+            data=payload,
+            headers={
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            resp.read()
+    except Exception:
+        pass
+
+
 # ── Weather (Open-Meteo, free, no key) ───────────────────────────────────────
 def _get_weather() -> dict:
     url = (
@@ -226,20 +249,35 @@ def _ai_predict(veg: str, market: Optional[str]) -> dict:
     m = re.search(r"\{.*\}", content, re.DOTALL)
     ai = json.loads(m.group() if m else content)
 
-    tr = ai.get("trend", "stable")
+    tr   = ai.get("trend", "stable")
     pred = float(ai.get("predicted_price", current))
+    cl   = round(float(ai.get("confidence_lower", pred * 0.90)), 2)
+    cu   = round(float(ai.get("confidence_upper", pred * 1.10)), 2)
+    model_used = result.get("_model_used", "nvidia/nim")
+
+    # Persist so /dashboard and /predict pick up the AI price
+    _rest_insert("predictions", {
+        "vegetable_name":    veg,
+        "prediction_date":   str(fd),
+        "predicted_price":   round(pred, 2),
+        "confidence_lower":  cl,
+        "confidence_upper":  cu,
+        "trend":             tr,
+        "model_used":        model_used,
+    })
+
     return {
-        "vegetable": veg,
-        "prediction_date": str(fd),
-        "current_price": current,
-        "predicted_price": round(pred, 2),
-        "confidence_lower": round(float(ai.get("confidence_lower", pred * 0.90)), 2),
-        "confidence_upper": round(float(ai.get("confidence_upper", pred * 1.10)), 2),
-        "trend": tr,
-        "trend_emoji": {"up": "↑", "down": "↓", "stable": "→"}.get(tr, "→"),
-        "reasoning": ai.get("reasoning", ""),
-        "model_name": result.get("_model_used", "nvidia/nim"),
-        "weather_used": bool(weather_ctx),
+        "vegetable":         veg,
+        "prediction_date":   str(fd),
+        "current_price":     current,
+        "predicted_price":   round(pred, 2),
+        "confidence_lower":  cl,
+        "confidence_upper":  cu,
+        "trend":             tr,
+        "trend_emoji":       {"up": "↑", "down": "↓", "stable": "→"}.get(tr, "→"),
+        "reasoning":         ai.get("reasoning", ""),
+        "model_name":        model_used,
+        "weather_used":      bool(weather_ctx),
     }
 
 
@@ -556,23 +594,61 @@ def _dispatch(path: str, qs: dict) -> tuple:
         return _ok({"vegetable": veg, "market": market, "forecast": forecast})
 
     if path == "/dashboard":
+        # Batch-fetch latest AI predictions saved to Supabase
+        saved: dict = {}
+        try:
+            veg_list = ",".join(VEGETABLES)
+            rows = _rest("predictions", {
+                "vegetable_name": f"in.({veg_list})",
+                "order": "created_at.desc",
+                "limit": "200",
+                "select": "vegetable_name,prediction_date,predicted_price,"
+                          "confidence_lower,confidence_upper,trend,model_used",
+            })
+            for r in rows:
+                v = r["vegetable_name"]
+                if v not in saved:  # keep most recent (order=desc)
+                    saved[v] = r
+        except Exception:
+            pass
+
         all_preds = []
         for veg in VEGETABLES:
-            p = _predict(veg, None, days=1)
-            if p:
-                p["change_pct"] = round(
-                    (p["predicted_price"] - p["current_price"]) / p["current_price"] * 100, 1
-                )
-                all_preds.append(p)
+            if veg in saved:
+                r       = saved[veg]
+                current = _get_price(veg, None)
+                pp      = r["predicted_price"]
+                tr      = _trend(current, pp) if current else r.get("trend", "stable")
+                chg     = round((pp - current) / current * 100, 1) if current else 0
+                all_preds.append({
+                    "vegetable":        veg,
+                    "prediction_date":  r["prediction_date"],
+                    "current_price":    current,
+                    "predicted_price":  pp,
+                    "confidence_lower": r.get("confidence_lower") or round(pp * 0.92, 2),
+                    "confidence_upper": r.get("confidence_upper") or round(pp * 1.08, 2),
+                    "trend":            tr,
+                    "trend_emoji":      {"up": "↑", "down": "↓", "stable": "→"}.get(tr, "→"),
+                    "model_name":       r.get("model_used", "ai"),
+                    "change_pct":       chg,
+                })
+            else:
+                p = _predict(veg, None, days=1)
+                if p:
+                    p["change_pct"] = round(
+                        (p["predicted_price"] - p["current_price"]) / p["current_price"] * 100, 1
+                    ) if p.get("current_price") else 0
+                    all_preds.append(p)
+
         rising  = sorted([p for p in all_preds if p["trend"] == "up"],  key=lambda x: x["change_pct"], reverse=True)[:5]
         falling = sorted([p for p in all_preds if p["trend"] == "down"], key=lambda x: x["change_pct"])[:5]
         return _ok({
             "total_vegetables": len(all_preds),
-            "markets_tracked": 5,
-            "last_updated": str(date.today()),
-            "top_rising": rising,
-            "top_falling": falling,
-            "all_predictions": all_preds,
+            "markets_tracked":  5,
+            "last_updated":     str(date.today()),
+            "top_rising":       rising,
+            "top_falling":      falling,
+            "all_predictions":  all_preds,
         })
 
     return _err("Not found", 404)
