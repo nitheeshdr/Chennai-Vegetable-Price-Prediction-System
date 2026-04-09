@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { api } from '../services/api';
+import { api, apiClient } from '../services/api';
 import { C } from '../theme';
 
 const VEGETABLES = [
@@ -15,13 +15,16 @@ const VEGETABLES = [
 ];
 
 type RefreshStatus = 'idle' | 'running' | 'done' | 'error';
+type TestStatus = 'idle' | 'testing' | 'ok' | 'fail';
 
 export default function AdminScreen() {
-  const [status, setStatus]       = useState<RefreshStatus>('idle');
-  const [progress, setProgress]   = useState(0);
+  const [status, setStatus]         = useState<RefreshStatus>('idle');
+  const [progress, setProgress]     = useState(0);
   const [currentVeg, setCurrentVeg] = useState('');
-  const [results, setResults]     = useState<string[]>([]);
-  const [lastRun, setLastRun]     = useState<string | null>(null);
+  const [results, setResults]       = useState<string[]>([]);
+  const [lastRun, setLastRun]       = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<TestStatus>('idle');
+  const [testMsg, setTestMsg]       = useState('');
 
   const runRefresh = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -53,6 +56,22 @@ export default function AdminScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
+  const testConnection = async () => {
+    setTestStatus('testing');
+    setTestMsg('');
+    try {
+      const { data } = await apiClient.get('/test-ai');
+      setTestStatus('ok');
+      setTestMsg(`✓ ${data.model} responded: "${data.reply}"`);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err.message || 'Connection failed';
+      setTestStatus('fail');
+      setTestMsg(`✗ ${msg}`);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
+
   const confirmRun = () => {
     Alert.alert(
       'Refresh AI Predictions',
@@ -80,10 +99,11 @@ export default function AdminScreen() {
           <Text style={styles.cardTitle}>System Status</Text>
         </View>
         {[
-          { label: 'Vercel API', val: 'Online', color: C.green, icon: 'checkmark-circle' },
-          { label: 'Supabase DB', val: 'Connected', color: C.green, icon: 'checkmark-circle' },
-          { label: 'AI Engine', val: 'OpenRouter GPT-4o Mini', color: C.indigoLight, icon: 'sparkles' },
-          { label: 'Auto-Retrain', val: 'Daily 6:00 AM (Mac)', color: C.amber, icon: 'time-outline' },
+          { label: 'Vercel API',    val: 'Online',                      color: C.green,      icon: 'checkmark-circle' },
+          { label: 'Supabase DB',   val: 'Connected',                   color: C.green,      icon: 'checkmark-circle' },
+          { label: 'AI Engine',     val: 'Mistral 7B (Free)',           color: C.indigoLight, icon: 'sparkles' },
+          { label: 'Vision Model',  val: 'Llama 3.2 Vision (Free)',     color: C.indigoLight, icon: 'eye-outline' },
+          { label: 'Auto-Retrain',  val: 'Daily 6:00 AM (Mac)',         color: C.amber,      icon: 'time-outline' },
         ].map(row => (
           <View key={row.label} style={styles.statusRow}>
             <Ionicons name={row.icon as any} size={14} color={row.color} />
@@ -94,6 +114,35 @@ export default function AdminScreen() {
         {lastRun && (
           <Text style={styles.lastRun}>Last AI refresh: {lastRun}</Text>
         )}
+
+        {/* Test Connection */}
+        <TouchableOpacity
+          style={[styles.testBtn, testStatus === 'testing' && { opacity: 0.6 }]}
+          onPress={testConnection}
+          disabled={testStatus === 'testing'}
+          activeOpacity={0.8}
+        >
+          {testStatus === 'testing'
+            ? <ActivityIndicator size="small" color={C.indigo} />
+            : <Ionicons
+                name={testStatus === 'ok' ? 'checkmark-circle' : testStatus === 'fail' ? 'close-circle' : 'wifi-outline'}
+                size={16}
+                color={testStatus === 'ok' ? C.green : testStatus === 'fail' ? C.red : C.indigo}
+              />
+          }
+          <Text style={[
+            styles.testBtnText,
+            testStatus === 'ok' && { color: C.green },
+            testStatus === 'fail' && { color: C.red },
+          ]}>
+            {testStatus === 'testing' ? 'Testing...' : 'Test AI Connection'}
+          </Text>
+        </TouchableOpacity>
+        {testMsg ? (
+          <Text style={[styles.testMsg, { color: testStatus === 'ok' ? C.green : C.red }]}>
+            {testMsg}
+          </Text>
+        ) : null}
       </View>
 
       {/* Train Button */}
@@ -215,6 +264,13 @@ const styles = StyleSheet.create({
   statusLabel: { color: C.text2, fontSize: 13, flex: 1 },
   statusVal: { fontSize: 12, fontWeight: '600' },
   lastRun: { color: C.text3, fontSize: 11, marginTop: 10, textAlign: 'center' },
+  testBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 12, paddingVertical: 10, borderRadius: 10,
+    backgroundColor: '#6366f115', borderWidth: 1, borderColor: '#6366f130',
+  },
+  testBtnText: { color: C.indigo, fontSize: 13, fontWeight: '600' },
+  testMsg: { fontSize: 12, textAlign: 'center', marginTop: 8, lineHeight: 18 },
   trainBtn: { borderRadius: 14, overflow: 'hidden' },
   trainBtnDisabled: { opacity: 0.7 },
   trainBtnGrad: {

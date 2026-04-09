@@ -311,6 +311,37 @@ def _dispatch(path: str, qs: dict) -> tuple:
     if path == "/health":
         return _ok({"status": "ok", "platform": "vercel", "supabase": bool(SUPABASE_URL)})
 
+    if path == "/test-ai":
+        if not OPENROUTER_KEY:
+            return _err("OPENROUTER_API_KEY not set on server", 503)
+        try:
+            payload = json.dumps({
+                "model": "mistralai/mistral-7b-instruct:free",
+                "messages": [{"role": "user", "content": "Reply with exactly: ok"}],
+                "max_tokens": 5,
+            }).encode()
+            req = urllib.request.Request(
+                "https://openrouter.ai/api/v1/chat/completions",
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://chennai-vegetable-price-prediction.vercel.app",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = json.loads(resp.read())
+            reply = result["choices"][0]["message"]["content"].strip()
+            return _ok({
+                "status": "ok",
+                "model": "mistralai/mistral-7b-instruct:free",
+                "reply": reply,
+                "key_prefix": OPENROUTER_KEY[:12] + "...",
+            })
+        except Exception as e:
+            return _err(f"AI connection failed: {e}", 502)
+
     if path == "/weather":
         try:
             return _ok(_get_weather())

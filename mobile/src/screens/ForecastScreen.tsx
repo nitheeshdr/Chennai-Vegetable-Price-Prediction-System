@@ -35,7 +35,7 @@ export default function ForecastScreen({ route }: any) {
     setAiError('');
     api.aiPredict(vegetable)
       .then(d => { setAiPred(d); setAiMode(true); })
-      .catch(() => setAiError('AI prediction failed. Check API key.'))
+      .catch((e: any) => setAiError(e?.response?.data?.error || 'AI prediction failed — try again'))
       .finally(() => setAiLoading(false));
   };
 
