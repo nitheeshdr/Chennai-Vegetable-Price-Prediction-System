@@ -44,15 +44,52 @@ class WeightedEnsemble(BaseModel):
         return np.stack(preds_list, axis=0)  # (n_models, n_samples)
 
     def fit(self, train, val=None, feature_cols=None, target_col="target_price"):
-        """Fit weights via scipy minimize on validation RMSE."""
-        if val is None or len(val) == 0:
-            logger.warning("No val set for ensemble — using uniform weights")
-            self.weights = np.ones(len(self.models)) / len(self.models)
-            self._is_fitted = True
-            return
+        """Fit weights using time-series CV on train+val, optimise for RMSE."""
+        combined = pd.concat([train, val], ignore_index=True) if val is not None and len(val) else train
+        combined = combined.sort_values("date").reset_index(drop=True) if "date" in combined.columns else combined
 
-        all_preds = self._get_model_preds(val, feature_cols)
-        y_true = val[target_col].values
+        n = len(combined)
+        n_models = len(self.models)
+
+        # Time-series walk-forward: 3 folds, each fold adds 20% more history
+        fold_oof_preds = np.zeros((n_models, n))
+        fold_oof_counts = np.zeros(n)
+
+        n_splits = 3
+        min_train = max(int(n * 0.4), 60)
+
+        for fold in range(n_splits):
+            split = min_train + int((n - min_train) * fold / n_splits)
+            val_end = min_train + int((n - min_train) * (fold + 1) / n_splits)
+            tr = combined.iloc[:split]
+            vl = combined.iloc[split:val_end]
+            if len(vl) == 0:
+                continue
+            for i, m in enumerate(self.models):
+                try:
+                    p = m.predict(vl, feature_cols)
+                    if len(p) == len(vl):
+                        fold_oof_preds[i, split:val_end] += p
+                        fold_oof_counts[split:val_end] += 1
+                except Exception as exc:
+                    logger.warning(f"OOF predict failed {m.name} fold {fold}: {exc}")
+
+        # Average over folds where we have predictions
+        valid_mask = fold_oof_counts > 0
+        if valid_mask.sum() < 10:
+            # Fallback: use val set directly
+            if val is not None and len(val) > 0:
+                all_preds = self._get_model_preds(val, feature_cols)
+                y_true = val[target_col].values
+            else:
+                self.weights = np.ones(n_models) / n_models
+                self._is_fitted = True
+                return
+        else:
+            avg_preds = np.where(fold_oof_counts > 0,
+                                 fold_oof_preds / np.maximum(fold_oof_counts, 1), 0)
+            all_preds = avg_preds[:, valid_mask]
+            y_true = combined[target_col].values[valid_mask]
 
         def objective(w):
             w = np.abs(w)
@@ -62,9 +99,9 @@ class WeightedEnsemble(BaseModel):
 
         result = minimize(
             objective,
-            x0=np.ones(len(self.models)) / len(self.models),
+            x0=np.ones(n_models) / n_models,
             method="SLSQP",
-            bounds=[(0, 1)] * len(self.models),
+            bounds=[(0, 1)] * n_models,
             constraints={"type": "eq", "fun": lambda w: np.abs(w).sum() - 1},
         )
         w = np.abs(result.x)

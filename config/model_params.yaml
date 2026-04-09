@@ -2,34 +2,37 @@
 # Used by training pipeline; can be overridden via Optuna tuning
 
 random_forest:
-  n_estimators: 300
-  max_depth: 12
-  min_samples_leaf: 5
-  n_jobs: -1
+  n_estimators: 200
+  max_depth: 5
+  min_samples_leaf: 15
+  max_features: 0.6
+  n_jobs: 1
   random_state: 42
 
 xgboost:
-  n_estimators: 500
-  learning_rate: 0.05
-  max_depth: 6
-  subsample: 0.8
-  colsample_bytree: 0.8
-  reg_alpha: 0.1
-  reg_lambda: 1.0
+  n_estimators: 300
+  learning_rate: 0.03
+  max_depth: 4
+  subsample: 0.7
+  colsample_bytree: 0.7
+  reg_alpha: 1.0
+  reg_lambda: 5.0
+  min_child_weight: 10
   random_state: 42
-  n_jobs: -1
+  n_jobs: 1
 
 lightgbm:
-  n_estimators: 500
-  learning_rate: 0.05
-  num_leaves: 63
-  max_depth: -1
-  subsample: 0.8
-  colsample_bytree: 0.8
-  reg_alpha: 0.1
-  reg_lambda: 1.0
+  n_estimators: 300
+  learning_rate: 0.03
+  num_leaves: 15
+  max_depth: 5
+  min_child_samples: 20
+  subsample: 0.7
+  colsample_bytree: 0.7
+  reg_alpha: 1.0
+  reg_lambda: 5.0
   random_state: 42
-  n_jobs: -1
+  n_jobs: 1
 
 prophet:
   changepoint_prior_scale: 0.05

@@ -75,18 +75,42 @@ class FeatureEngineer:
         return group
 
     def _add_rolling_features(self, group: pd.DataFrame) -> pd.DataFrame:
+        p = group["modal_price"]
         for w in self.ROLLING_WINDOWS:
-            group[f"rolling_mean_{w}"] = group["modal_price"].shift(1).rolling(w).mean()
-            group[f"rolling_std_{w}"] = group["modal_price"].shift(1).rolling(w).std()
-        group["rolling_min_7"] = group["modal_price"].shift(1).rolling(7).min()
-        group["rolling_max_7"] = group["modal_price"].shift(1).rolling(7).max()
-        # Price velocity (day-over-day change)
-        group["price_velocity"] = group["modal_price"].diff()
-        # Price volatility (std / mean)
+            group[f"rolling_mean_{w}"] = p.shift(1).rolling(w).mean()
+            group[f"rolling_std_{w}"]  = p.shift(1).rolling(w).std()
+        group["rolling_min_7"] = p.shift(1).rolling(7).min()
+        group["rolling_max_7"] = p.shift(1).rolling(7).max()
+
+        # Price velocity: 1-day and 3-day momentum
+        group["price_velocity"]   = p.diff()
+        group["price_momentum_3"] = p.diff(3)           # change over 3 days
+        group["price_momentum_7"] = p.diff(7)           # change over 7 days
+
+        # Price volatility (std / mean over 7 days)
         group["price_volatility"] = (
-            group["modal_price"].shift(1).rolling(7).std()
-            / group["modal_price"].shift(1).rolling(7).mean()
+            p.shift(1).rolling(7).std()
+            / p.shift(1).rolling(7).mean()
         ).fillna(0)
+
+        # Seasonal deviation: how far is today's price from the 30-day seasonal mean?
+        # Positive → price above seasonal norm (likely to revert down)
+        # Negative → price below seasonal norm (likely to revert up)
+        rolling_30 = p.shift(1).rolling(30, min_periods=7).mean()
+        group["seasonal_deviation"] = (p - rolling_30) / rolling_30.replace(0, np.nan)
+        group["seasonal_deviation"] = group["seasonal_deviation"].fillna(0)
+
+        # Price percentile rank within last 30 days (0=lowest, 1=highest)
+        group["price_rank_30"] = (
+            p.shift(1).rolling(30, min_periods=7)
+            .apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1], raw=False)
+        ).fillna(0.5)
+
+        # Mean-reversion signal: how many std devs from 14-day mean?
+        mean_14 = p.shift(1).rolling(14).mean()
+        std_14  = p.shift(1).rolling(14).std().replace(0, np.nan)
+        group["zscore_14"] = ((p - mean_14) / std_14).fillna(0).clip(-3, 3)
+
         return group
 
     def _add_supply_features(self, group: pd.DataFrame) -> pd.DataFrame:
@@ -216,7 +240,11 @@ class FeatureEngineer:
             "sin_doy", "cos_doy", "sin_month", "cos_month", "sin_dow", "cos_dow",
             "season", "is_festival",
         ]
-        supply = ["supply_demand_ratio", "price_velocity", "price_volatility"]
+        supply = [
+            "supply_demand_ratio", "price_velocity", "price_volatility",
+            "price_momentum_3", "price_momentum_7",
+            "seasonal_deviation", "price_rank_30", "zscore_14",
+        ]
         weather = [
             "temperature", "rainfall", "humidity", "wind_speed",
             "rainfall_3d", "temp_rainfall_interaction",
