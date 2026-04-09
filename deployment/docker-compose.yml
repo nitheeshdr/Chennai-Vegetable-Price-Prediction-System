@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  # ── FastAPI backend ─────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.api
+    ports:
+      - "8000:8000"
+    env_file: ../.env
+    volumes:
+      - ../data:/app/data       # Shared data volume (model artifacts + features)
+      - ../config:/app/config
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Redis (prediction cache) ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+
+  # ── ML worker (daily retraining via APScheduler) ────────────────────────────
+  ml-worker:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.ml
+    env_file: ../.env
+    volumes:
+      - ../data:/app/data       # Same shared volume — saves updated models here
+      - ../config:/app/config
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  redis_data:
