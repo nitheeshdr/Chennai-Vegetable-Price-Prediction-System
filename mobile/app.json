@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#0f172a"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -24,11 +26,20 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
       },
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
-      ["expo-camera", { "cameraPermission": "Allow VegPrice to scan vegetables" }],
-      "expo-notifications"
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow VegPrice to scan vegetables"
+        }
+      ],
+      "expo-notifications",
+      "expo-router"
     ]
   }
 }

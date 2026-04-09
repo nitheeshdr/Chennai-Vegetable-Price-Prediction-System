@@ -26,6 +26,8 @@ def main():
                         help="Train vision classifier only")
     parser.add_argument("--no-deep", action="store_true",
                         help="Skip TCN and Transformer models")
+    parser.add_argument("--no-lstm", action="store_true",
+                        help="Skip LSTM model (faster training on CPU)")
     args = parser.parse_args()
 
     if args.vision:
@@ -36,12 +38,13 @@ def main():
 
     # Price prediction models
     include_deep = not args.incremental and not args.no_deep
+    include_lstm = not args.no_lstm
     logger.info(
         f"Starting training pipeline | incremental={args.incremental} | "
-        f"deep_learning={include_deep}"
+        f"deep_learning={include_deep} | lstm={include_lstm}"
     )
     from src.pipeline.training_pipeline import TrainingPipeline
-    pipeline = TrainingPipeline(include_deep_learning=include_deep)
+    pipeline = TrainingPipeline(include_deep_learning=include_deep, include_lstm=include_lstm)
     mapping = pipeline.run(incremental=args.incremental)
 
     logger.info(f"\nTrained models for {len(mapping)} vegetables")

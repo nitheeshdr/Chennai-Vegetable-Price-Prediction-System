@@ -38,6 +38,9 @@ def main():
 
     # Seed price_records table
     logger.info(f"Seeding {len(df):,} price records to Supabase...")
+    # 'state' may not be in processed data — add default if missing
+    if "state" not in df.columns:
+        df["state"] = "Tamil Nadu"
     records = df[[
         "date", "vegetable_name", "market_name", "state",
         "min_price", "max_price", "modal_price", "arrival_qty"

@@ -36,6 +36,12 @@ class LightGBMModel(BaseModel):
         self._model.fit(X_train, y_train, **fit_kwargs)
         self._is_fitted = True
 
+    def load(self, path) -> None:
+        super().load(path)
+        # Disable parallelism to avoid OpenMP crashes in async/threaded contexts
+        if hasattr(self._model, 'n_jobs'):
+            self._model.n_jobs = 1
+
     def predict(self, X, feature_cols=None):
         Xf = self._get_features(X, feature_cols).fillna(0)
         return np.clip(self._model.predict(Xf), 0, None)

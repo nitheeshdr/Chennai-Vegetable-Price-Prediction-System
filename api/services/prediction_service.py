@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import warnings
 from datetime import date
 from pathlib import Path
 
@@ -30,35 +32,57 @@ async def _get_redis() -> aioredis.Redis:
     return _redis
 
 
+def get_prediction_sync(
+    vegetable: str,
+    market: str | None = None,
+    prediction_date: date | None = None,
+) -> PredictionResponse | None:
+    """Synchronous prediction — called from sync FastAPI endpoints."""
+    import warnings as _w
+    pipeline = _get_pipeline()
+    with _w.catch_warnings():
+        _w.simplefilter("ignore")
+        result = pipeline.predict(vegetable, market, prediction_date)
+    if result is None:
+        return None
+    current_price = pipeline._get_current_price(vegetable, market)
+    return PredictionResponse.from_result(result, current_price)
+
+
 async def get_prediction(
     vegetable: str,
     market: str | None = None,
     prediction_date: date | None = None,
 ) -> PredictionResponse | None:
     cache_key = f"pred:{vegetable}:{market}:{prediction_date or 'tomorrow'}"
-    redis = await _get_redis()
+    try:
+        redis = await _get_redis()
+        cached = await redis.get(cache_key)
+        if cached:
+            return PredictionResponse(**json.loads(cached))
+    except Exception:
+        cached = None
 
-    cached = await redis.get(cache_key)
-    if cached:
-        return PredictionResponse(**json.loads(cached))
-
-    pipeline = _get_pipeline()
-    result = pipeline.predict(vegetable, market, prediction_date)
+    result = get_prediction_sync(vegetable, market, prediction_date)
     if result is None:
         return None
 
-    current_price = pipeline._get_current_price(vegetable, market)
-    response = PredictionResponse.from_result(result, current_price)
-
-    await redis.setex(cache_key, 3600, response.model_dump_json())
-    return response
+    try:
+        redis = await _get_redis()
+        await redis.setex(cache_key, 3600, result.model_dump_json())
+    except Exception:
+        pass
+    return result
 
 
 async def get_weekly_forecast(
     vegetable: str, market: str | None = None
 ) -> WeeklyForecastResponse:
+    import warnings as _w
     pipeline = _get_pipeline()
-    results = pipeline.predict_weekly(vegetable, market)
+    with _w.catch_warnings():
+        _w.simplefilter("ignore")
+        results = pipeline.predict_weekly(vegetable, market)
     current = pipeline._get_current_price(vegetable, market)
     forecasts = [PredictionResponse.from_result(r, current) for r in results]
     return WeeklyForecastResponse(vegetable=vegetable, market=market, forecast=forecasts)

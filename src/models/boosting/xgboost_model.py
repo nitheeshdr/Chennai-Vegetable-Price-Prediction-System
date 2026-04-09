@@ -26,6 +26,11 @@ class XGBoostModel(BaseModel):
             verbosity=0,
         )
 
+    def load(self, path) -> None:
+        super().load(path)
+        if hasattr(self._model, 'n_jobs'):
+            self._model.n_jobs = 1
+
     def fit(self, train, val=None, feature_cols=None, target_col="target_price"):
         X_train = self._get_features(train, feature_cols).fillna(0)
         y_train = train[target_col].values

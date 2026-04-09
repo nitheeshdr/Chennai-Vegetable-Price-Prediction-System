@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query
 from api.schemas.responses import PredictionResponse
-from api.services.prediction_service import get_prediction
+from api.services.prediction_service import get_prediction_sync
 
 router = APIRouter(prefix="/predict", tags=["predictions"])
 
 
 @router.get("", response_model=PredictionResponse)
-async def predict_price(
+def predict_price(
     vegetable: str = Query(..., description="Vegetable name e.g. tomato"),
     market: str | None = Query(None, description="Market name e.g. koyambedu"),
 ):
-    result = await get_prediction(vegetable.lower().replace(" ", "_"), market)
+    result = get_prediction_sync(vegetable.lower().replace(" ", "_"), market)
     if result is None:
         raise HTTPException(
             status_code=404,

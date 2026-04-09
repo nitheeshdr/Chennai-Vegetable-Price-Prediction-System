@@ -10,6 +10,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from dotenv import load_dotenv
+load_dotenv()
+
+# Disable OpenMP multi-threading before ML libs are imported
+# to prevent SIGSEGV crashes when running inside async server
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -30,12 +41,7 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting VegPrice API...")
-    # Pre-warm inference pipeline on startup
-    try:
-        from src.pipeline.inference_pipeline import _load_model
-        logger.info("API ready")
-    except Exception:
-        pass
+    logger.info("API ready")
     yield
     logger.info("Shutting down VegPrice API")
 

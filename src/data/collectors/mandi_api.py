@@ -53,9 +53,9 @@ class MandiAPICollector:
 
         logger.info(f"Fetching mandi data: {state} | {from_date} → {to_date}")
 
+        # API uses lowercase field names; date filter not supported server-side — filter in Python
         filters = {
-            "filters[State]": state,
-            "filters[Arrival_Date]": f"{from_date.strftime('%d/%m/%Y')}:{to_date.strftime('%d/%m/%Y')}",
+            "filters[state]": state,
         }
 
         all_records: list[dict] = []
@@ -87,19 +87,25 @@ class MandiAPICollector:
 
         df = pd.DataFrame(all_records)
         df = self._normalize(df)
+        # Filter by date range in Python (API doesn't support date range filter)
+        if "date" in df.columns and from_date and to_date:
+            from_ts = pd.Timestamp(from_date)
+            to_ts = pd.Timestamp(to_date)
+            df = df[(df["date"] >= from_ts) & (df["date"] <= to_ts)]
         return df
 
     def _normalize(self, df: pd.DataFrame) -> pd.DataFrame:
+        # API returns lowercase field names
         col_map = {
-            "Arrival_Date": "date",
-            "Commodity": "vegetable_name",
-            "Market": "market_name",
-            "District": "district",
-            "State": "state",
-            "Min_x0020_Price": "min_price",
-            "Max_x0020_Price": "max_price",
-            "Modal_x0020_Price": "modal_price",
-            "Arrivals_in_Qtl": "arrival_qty",
+            "arrival_date": "date",
+            "commodity": "vegetable_name",
+            "market": "market_name",
+            "district": "district",
+            "state": "state",
+            "min_price": "min_price",
+            "max_price": "max_price",
+            "modal_price": "modal_price",
+            "arrivals_in_qtl": "arrival_qty",
         }
         df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
 

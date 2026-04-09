@@ -36,15 +36,16 @@ def _load_params() -> dict:
     return {}
 
 
-def _build_models(params: dict, include_deep: bool = True) -> list[BaseModel]:
+def _build_models(params: dict, include_deep: bool = True, include_lstm: bool = True) -> list[BaseModel]:
     models: list[BaseModel] = [
         LinearRegressionModel(params.get("linear_regression")),
         RandomForestModel(params.get("random_forest")),
         XGBoostModel(params.get("xgboost")),
         LightGBMModel(params.get("lightgbm")),
         ProphetModel(params.get("prophet")),
-        LSTMModel(params.get("lstm")),
     ]
+    if include_lstm:
+        models.append(LSTMModel(params.get("lstm")))
     if include_deep:
         models += [
             TCNAttentionModel(params.get("tcn")),
@@ -58,11 +59,13 @@ class TrainingPipeline:
         self,
         artifact_dir: Path = ARTIFACT_DIR,
         include_deep_learning: bool = True,
+        include_lstm: bool = True,
         min_samples: int = 180,
     ):
         self.artifact_dir = Path(artifact_dir)
         self.artifact_dir.mkdir(parents=True, exist_ok=True)
         self.include_deep = include_deep_learning
+        self.include_lstm = include_lstm
         self.min_samples = min_samples
         self.feature_cols = FeatureEngineer.get_feature_columns()
 
@@ -90,7 +93,8 @@ class TrainingPipeline:
                 continue
 
             logger.info(f"\n--- Training models for: {veg} ---")
-            models = _build_models(params, include_deep=self.include_deep)
+            models = _build_models(params, include_deep=self.include_deep,
+                                   include_lstm=self.include_lstm)
             trained: list[BaseModel] = []
 
             for model in models:

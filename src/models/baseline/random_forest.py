@@ -20,6 +20,11 @@ class RandomForestModel(BaseModel):
             random_state=self.params.get("random_state", 42),
         )
 
+    def load(self, path) -> None:
+        super().load(path)
+        if hasattr(self._model, 'n_jobs'):
+            self._model.n_jobs = 1
+
     def fit(self, train, val=None, feature_cols=None, target_col="target_price"):
         X = self._get_features(train, feature_cols).fillna(0)
         y = train[target_col].values
@@ -27,11 +32,11 @@ class RandomForestModel(BaseModel):
         self._is_fitted = True
 
     def predict(self, X, feature_cols=None):
-        Xf = self._get_features(X, feature_cols).fillna(0)
+        Xf = self._get_features(X, feature_cols).fillna(0).values
         return np.clip(self._model.predict(Xf), 0, None)
 
     def predict_with_interval(self, X, feature_cols=None, interval_width=0.9):
-        Xf = self._get_features(X, feature_cols).fillna(0)
+        Xf = self._get_features(X, feature_cols).fillna(0).values  # numpy to silence feature-name warnings
         # Aggregate individual tree predictions for a natural CI
         tree_preds = np.stack(
             [tree.predict(Xf) for tree in self._model.estimators_], axis=0
