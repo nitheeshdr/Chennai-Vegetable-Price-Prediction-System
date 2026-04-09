@@ -140,12 +140,13 @@ def _predict(veg: str, market: Optional[str], days: int = 1) -> Optional[dict]:
 
 # ── OpenRouter AI prediction ──────────────────────────────────────────────────
 _FREE_MODELS = [
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "meta-llama/llama-3.1-8b-instruct:free",
-    "microsoft/phi-3-mini-128k-instruct:free",
-    "google/gemma-3-1b-it:free",
-    "deepseek/deepseek-r1-distill-qwen-7b:free",
-    "qwen/qwen-2-7b-instruct:free",
+    "meta-llama/llama-3.2-3b-instruct:free",   # small, fast
+    "meta-llama/llama-3.3-70b-instruct:free",   # large, capable
+    "deepseek/deepseek-chat-v3-0324:free",       # DeepSeek v3
+    "google/gemini-2.0-flash-exp:free",          # Gemini Flash
+    "microsoft/phi-4:free",                      # Phi-4
+    "qwen/qwen3-8b:free",                        # Qwen 3 8B
+    "mistralai/mistral-small-3.1-24b-instruct:free",  # Mistral Small
 ]
 
 def _call_openrouter(payload_dict: dict, timeout: int = 25) -> dict:

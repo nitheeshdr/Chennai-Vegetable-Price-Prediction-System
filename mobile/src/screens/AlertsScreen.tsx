@@ -8,7 +8,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
-import { C } from '../theme';
+import { C, SP, SHAPE } from '../theme';
 
 const VEGETABLES = [
   'tomato', 'onion', 'potato', 'brinjal', 'ladies_finger',
@@ -42,15 +42,10 @@ export default function AlertsScreen() {
     }
     setCreating(true);
     try {
-      await api.createAlert({
-        user_id:         USER_ID,
-        vegetable_name:  selectedVeg,
-        threshold_price: Number(threshold),
-        direction,
-      });
+      await api.createAlert({ user_id: USER_ID, vegetable_name: selectedVeg, threshold_price: Number(threshold), direction });
       setThreshold('');
       await loadAlerts();
-      setSnack(`Alert set for ${selectedVeg} ${direction} ₹${threshold}`);
+      setSnack(`Alert set: ${selectedVeg.replace(/_/g,' ')} ${direction} ₹${threshold}/kg`);
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -61,84 +56,83 @@ export default function AlertsScreen() {
   const deleteAlert = (id: string, name: string) => {
     Alert.alert('Remove Alert', `Delete alert for ${name.replace(/_/g, ' ')}?`, [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          await api.deleteAlert(id);
-          loadAlerts();
-          setSnack('Alert removed');
-        },
-      },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteAlert(id); loadAlerts(); setSnack('Alert removed'); } },
     ]);
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* App Bar */}
-      <Surface style={styles.appbar} elevation={0}>
-        <Text variant="headlineMedium" style={styles.appTitle}>Price Alerts</Text>
-        <Text variant="labelMedium" style={{ color: C.text3 }}>Get notified when prices change</Text>
+    <View style={[s.root, { paddingTop: insets.top }]}>
+      {/* ── Top App Bar ── */}
+      <Surface style={s.topBar} elevation={0}>
+        <Text variant="headlineMedium" style={s.appTitle}>Price Alerts</Text>
+        <Text variant="labelMedium" style={{ color: C.text3, marginTop: SP.xs }}>
+          Get notified when prices change
+        </Text>
       </Surface>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SP.huge }}>
 
-        {/* Create Alert Card */}
-        <Card style={styles.card}>
+        {/* ── Create Alert ── */}
+        <Card style={s.card}>
           <Card.Content>
-            <View style={styles.cardHeader}>
+            <View style={s.cardHead}>
               <MaterialCommunityIcons name="bell-plus" size={18} color={C.primary} />
-              <Text variant="titleMedium" style={styles.cardTitle}>Create Alert</Text>
+              <Text variant="titleMedium" style={s.cardTitle}>Create Alert</Text>
             </View>
 
-            {/* Vegetable picker */}
-            <Text variant="labelMedium" style={styles.fieldLabel}>Vegetable</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vegScroll} contentContainerStyle={styles.vegRow}>
+            {/* Vegetable */}
+            <Text variant="labelMedium" style={s.fieldLabel}>Vegetable</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: SP.sm, paddingBottom: SP.sm }}
+            >
               {VEGETABLES.map(v => (
                 <Chip
                   key={v}
                   selected={selectedVeg === v}
                   onPress={() => setSelectedVeg(v)}
-                  style={[styles.vegChip, { backgroundColor: selectedVeg === v ? `${C.primary}30` : C.surface2 }]}
-                  textStyle={{ color: selectedVeg === v ? C.primary : C.text2, fontSize: 12, fontWeight: selectedVeg === v ? '700' : '400' }}
                   showSelectedCheck={false}
                   compact
+                  style={[
+                    s.vegChip,
+                    { backgroundColor: selectedVeg === v ? `${C.primary}28` : C.surface2 },
+                  ]}
+                  textStyle={{ color: selectedVeg === v ? C.primary : C.text2, fontSize: 12, fontWeight: selectedVeg === v ? '700' : '400' }}
                 >
                   {v.replace(/_/g, ' ')}
                 </Chip>
               ))}
             </ScrollView>
 
-            {/* Direction toggle */}
-            <Text variant="labelMedium" style={styles.fieldLabel}>Alert when price is</Text>
+            {/* Direction */}
+            <Text variant="labelMedium" style={s.fieldLabel}>Alert when price is</Text>
             <SegmentedButtons
               value={direction}
               onValueChange={v => setDirection(v as 'above' | 'below')}
-              style={{ marginBottom: 16 }}
+              style={{ marginBottom: SP.lg }}
               buttons={[
                 {
-                  value: 'above',
-                  label: 'Above ↑',
-                  icon: 'trending-up',
-                  style: { backgroundColor: direction === 'above' ? `${C.red}25` : C.surface2 },
+                  value: 'above', label: 'Above ↑', icon: 'trending-up',
+                  style: { backgroundColor: direction === 'above' ? `${C.red}20` : C.surface2 },
                 },
                 {
-                  value: 'below',
-                  label: 'Below ↓',
-                  icon: 'trending-down',
-                  style: { backgroundColor: direction === 'below' ? `${C.green}25` : C.surface2 },
+                  value: 'below', label: 'Below ↓', icon: 'trending-down',
+                  style: { backgroundColor: direction === 'below' ? `${C.green}20` : C.surface2 },
                 },
               ]}
             />
 
-            {/* Price input */}
+            {/* Price */}
             <TextInput
-              label="Threshold Price (₹/kg)"
+              label="Threshold Price"
               value={threshold}
               onChangeText={setThreshold}
               keyboardType="numeric"
               mode="outlined"
               left={<TextInput.Affix text="₹" textStyle={{ color: C.primary }} />}
-              style={styles.input}
+              right={<TextInput.Affix text="/kg" textStyle={{ color: C.text3 }} />}
+              style={s.input}
               outlineColor={C.border}
               activeOutlineColor={C.primary}
               textColor={C.text}
@@ -151,58 +145,56 @@ export default function AlertsScreen() {
               loading={creating}
               disabled={creating}
               icon="bell-plus"
-              style={styles.createBtn}
-              contentStyle={{ paddingVertical: 6 }}
+              style={s.createBtn}
+              contentStyle={{ paddingVertical: SP.sm }}
             >
               Set Alert
             </Button>
           </Card.Content>
         </Card>
 
-        {/* Active Alerts */}
-        <Card style={styles.card}>
+        {/* ── Active Alerts ── */}
+        <Card style={s.card}>
           <Card.Content>
-            <View style={styles.cardHeader}>
+            <View style={s.cardHead}>
               <MaterialCommunityIcons name="bell" size={18} color={C.amber} />
-              <Text variant="titleMedium" style={styles.cardTitle}>
-                Active Alerts
-              </Text>
-              <View style={styles.badge}>
-                <Text variant="labelSmall" style={{ color: C.primary, fontWeight: '800' }}>
-                  {alerts.length}
-                </Text>
-              </View>
+              <Text variant="titleMedium" style={s.cardTitle}>Active Alerts</Text>
+              {alerts.length > 0 && (
+                <View style={s.countBadge}>
+                  <Text variant="labelSmall" style={{ color: C.primary, fontWeight: '800' }}>{alerts.length}</Text>
+                </View>
+              )}
             </View>
 
             {loading && (
-              <View style={{ alignItems: 'center', padding: 20 }}>
+              <View style={{ alignItems: 'center', paddingVertical: SP.xxl }}>
                 <ActivityIndicator size="small" color={C.primary} />
               </View>
             )}
 
             {!loading && alerts.length === 0 && (
-              <View style={styles.emptyState}>
+              <View style={s.emptyState}>
                 <MaterialCommunityIcons name="bell-off-outline" size={48} color={C.text3} />
-                <Text variant="bodyMedium" style={{ color: C.text3, marginTop: 10, textAlign: 'center' }}>
+                <Text variant="bodyMedium" style={{ color: C.text3, marginTop: SP.md, textAlign: 'center' }}>
                   No active alerts.{'\n'}Create one above to get notified.
                 </Text>
               </View>
             )}
 
             {!loading && alerts.map((alert, idx) => {
-              const dir   = alert.direction === 'above';
-              const color = dir ? C.red : C.green;
-              const name  = alert.vegetable_name.replace(/_/g, ' ');
+              const isAbove = alert.direction === 'above';
+              const color   = isAbove ? C.red : C.green;
+              const name    = alert.vegetable_name.replace(/_/g, ' ');
               return (
                 <View key={alert.id}>
                   <List.Item
                     title={name.replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                    description={`${dir ? '↑ Above' : '↓ Below'} ₹${alert.threshold_price}/kg${alert.market_name ? ` · ${alert.market_name}` : ''}`}
+                    description={`${isAbove ? '↑ Above' : '↓ Below'} ₹${alert.threshold_price}/kg${alert.market_name ? ` · ${alert.market_name}` : ''}`}
                     titleStyle={{ color: C.text, fontWeight: '600', textTransform: 'capitalize' }}
                     descriptionStyle={{ color, fontWeight: '600', marginTop: 2 }}
                     left={() => (
-                      <View style={[styles.alertDot, { backgroundColor: `${color}25` }]}>
-                        <MaterialCommunityIcons name={dir ? 'trending-up' : 'trending-down'} size={16} color={color} />
+                      <View style={[s.alertIcon, { backgroundColor: `${color}20` }]}>
+                        <MaterialCommunityIcons name={isAbove ? 'trending-up' : 'trending-down'} size={16} color={color} />
                       </View>
                     )}
                     right={() => (
@@ -211,9 +203,11 @@ export default function AlertsScreen() {
                         iconColor={C.red}
                         size={18}
                         onPress={() => deleteAlert(alert.id, alert.vegetable_name)}
+                        style={{ margin: 0, alignSelf: 'center' }}
                       />
                     )}
-                    style={{ paddingHorizontal: 0, paddingVertical: 2 }}
+                    style={{ paddingHorizontal: 0, paddingVertical: SP.xs }}
+                    contentStyle={{ marginLeft: 0 }}
                   />
                   {idx < alerts.length - 1 && <Divider style={{ backgroundColor: C.border }} />}
                 </View>
@@ -221,15 +215,13 @@ export default function AlertsScreen() {
             })}
           </Card.Content>
         </Card>
-
-        <View style={{ height: 32 }} />
       </ScrollView>
 
       <Snackbar
         visible={!!snack}
         onDismiss={() => setSnack('')}
         duration={3000}
-        style={{ backgroundColor: C.surface2 }}
+        style={{ backgroundColor: C.surface2, marginBottom: SP.sm }}
       >
         {snack}
       </Snackbar>
@@ -237,29 +229,21 @@ export default function AlertsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  appbar:    { backgroundColor: C.surface, paddingHorizontal: 20, paddingBottom: 16, paddingTop: 12 },
-  appTitle:  { color: C.text, fontWeight: '800' },
+const s = StyleSheet.create({
+  root:     { flex: 1, backgroundColor: C.bg },
+  topBar:   { backgroundColor: C.surface, paddingHorizontal: SP.lg, paddingTop: SP.md, paddingBottom: SP.lg },
+  appTitle: { color: C.text, fontWeight: '800' },
 
-  card:       { marginHorizontal: 16, marginBottom: 12, backgroundColor: C.surface, borderRadius: 20 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  cardTitle:  { color: C.text, fontWeight: '700', flex: 1 },
+  card:      { marginHorizontal: SP.lg, marginBottom: SP.md, backgroundColor: C.surface, borderRadius: SHAPE.xl },
+  cardHead:  { flexDirection: 'row', alignItems: 'center', gap: SP.sm, marginBottom: SP.lg },
+  cardTitle: { color: C.text, fontWeight: '700', flex: 1 },
 
-  fieldLabel: { color: C.text3, marginBottom: 8, marginTop: 4 },
-  vegScroll:  { marginBottom: 16 },
-  vegRow:     { gap: 8, paddingRight: 8 },
-  vegChip:    { borderRadius: 20 },
+  fieldLabel: { color: C.text3, marginBottom: SP.sm, marginTop: SP.xs },
+  vegChip:    { borderRadius: SHAPE.full },
+  input:      { backgroundColor: C.surface2, marginBottom: SP.lg },
+  createBtn:  { borderRadius: SHAPE.lg },
 
-  input:     { backgroundColor: C.surface2, marginBottom: 16 },
-  createBtn: { borderRadius: 14 },
-
-  badge: {
-    backgroundColor: `${C.primary}25`,
-    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 4,
-  },
-
-  emptyState: { alignItems: 'center', paddingVertical: 24 },
-
-  alertDot: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 4, alignSelf: 'center' },
+  countBadge: { backgroundColor: `${C.primary}20`, borderRadius: SHAPE.full, paddingHorizontal: SP.sm, paddingVertical: 2 },
+  emptyState: { alignItems: 'center', paddingVertical: SP.xxl },
+  alertIcon:  { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginRight: SP.xs },
 });
