@@ -1,15 +1,5 @@
 {
-  "version": 2,
-  "functions": {
-    "api/index.py": {
-      "runtime": "vercel-python@3.0",
-      "maxDuration": 30
-    }
-  },
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "api/index.py"
-    }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
   ]
 }
