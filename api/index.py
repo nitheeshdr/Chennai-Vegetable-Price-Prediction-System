@@ -139,6 +139,46 @@ def _predict(veg: str, market: Optional[str], days: int = 1) -> Optional[dict]:
 
 
 # ── OpenRouter AI prediction ──────────────────────────────────────────────────
+_FREE_MODELS = [
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "google/gemma-2-9b-it:free",
+    "mistralai/mistral-7b-instruct:free",
+    "qwen/qwen-2.5-7b-instruct:free",
+]
+
+def _call_openrouter(payload_dict: dict, timeout: int = 20) -> dict:
+    """Try free models in order until one succeeds. Raises on auth error."""
+    import urllib.error as _ue
+    last_err = None
+    models_to_try = [payload_dict["model"]] + [m for m in _FREE_MODELS if m != payload_dict["model"]]
+    for model in models_to_try:
+        payload_dict["model"] = model
+        payload = json.dumps(payload_dict).encode()
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/chat/completions",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://chennai-vegetable-price-prediction.vercel.app",
+                "X-Title": "Chennai Vegetable Price AI",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                result = json.loads(resp.read())
+            result["_model_used"] = model
+            return result
+        except _ue.HTTPError as e:
+            if e.code == 401:
+                raise ValueError("OpenRouter API key is invalid. Please update OPENROUTER_API_KEY at openrouter.ai")
+            last_err = e
+        except Exception as e:
+            last_err = e
+    raise last_err or ValueError("All OpenRouter models failed")
+
+
 def _ai_predict(veg: str, market: Optional[str]) -> dict:
     current = _get_price(veg, market)
     if current is None:
@@ -171,26 +211,12 @@ def _ai_predict(veg: str, market: Optional[str]) -> dict:
         f'"reasoning": "<max 2 sentences>" }}'
     )
 
-    payload = json.dumps({
-        "model": "mistralai/mistral-7b-instruct:free",
+    result = _call_openrouter({
+        "model": _FREE_MODELS[0],
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 250,
         "temperature": 0.2,
-    }).encode()
-
-    req = urllib.request.Request(
-        "https://openrouter.ai/api/v1/chat/completions",
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://chennai-vegetable-price-prediction.vercel.app",
-            "X-Title": "Chennai Vegetable Price AI",
-        },
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        result = json.loads(resp.read())
+    })
 
     content = result["choices"][0]["message"]["content"].strip()
     m = re.search(r"\{.*\}", content, re.DOTALL)
@@ -208,7 +234,7 @@ def _ai_predict(veg: str, market: Optional[str]) -> dict:
         "trend": tr,
         "trend_emoji": {"up": "↑", "down": "↓", "stable": "→"}.get(tr, "→"),
         "reasoning": ai.get("reasoning", ""),
-        "model_name": "openrouter/gpt-4o-mini",
+        "model_name": result.get("_model_used", "openrouter/free"),
         "weather_used": bool(weather_ctx),
     }
 
@@ -230,7 +256,8 @@ def _scan_image(image_b64: str) -> dict:
         "If unsure, still pick the closest match."
     )
 
-    payload = json.dumps({
+    import urllib.error as _ue2
+    payload_dict = {
         "model": "meta-llama/llama-3.2-11b-vision-instruct:free",
         "messages": [{
             "role": "user",
@@ -241,8 +268,8 @@ def _scan_image(image_b64: str) -> dict:
         }],
         "max_tokens": 200,
         "temperature": 0.1,
-    }).encode()
-
+    }
+    payload = json.dumps(payload_dict).encode()
     req = urllib.request.Request(
         "https://openrouter.ai/api/v1/chat/completions",
         data=payload,
@@ -254,8 +281,13 @@ def _scan_image(image_b64: str) -> dict:
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=25) as resp:
-        result = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            result = json.loads(resp.read())
+    except _ue2.HTTPError as e:
+        if e.code == 401:
+            raise ValueError("OpenRouter API key is invalid. Please update it at openrouter.ai and redeploy.")
+        raise
 
     content = result["choices"][0]["message"]["content"].strip()
     m = re.search(r"\{.*\}", content, re.DOTALL)
@@ -313,39 +345,53 @@ def _dispatch(path: str, qs: dict) -> tuple:
 
     if path == "/test-ai":
         if not OPENROUTER_KEY:
-            return _err("OPENROUTER_API_KEY not set on server", 503)
-        try:
-            payload = json.dumps({
-                "model": "mistralai/mistral-7b-instruct:free",
-                "messages": [{"role": "user", "content": "Reply with exactly: ok"}],
-                "max_tokens": 5,
-            }).encode()
-            req = urllib.request.Request(
-                "https://openrouter.ai/api/v1/chat/completions",
-                data=payload,
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_KEY}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://chennai-vegetable-price-prediction.vercel.app",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                result = json.loads(resp.read())
-            reply = result["choices"][0]["message"]["content"].strip()
-            return _ok({
-                "status": "ok",
-                "model": "mistralai/mistral-7b-instruct:free",
-                "reply": reply,
-                "key_prefix": OPENROUTER_KEY[:12] + "...",
-            })
-        except Exception as e:
-            return _ok({
-                "status": "error",
-                "error": str(e),
-                "key_prefix": (OPENROUTER_KEY[:12] + "...") if OPENROUTER_KEY else "NOT_SET",
-                "key_length": len(OPENROUTER_KEY),
-            })
+            return _ok({"status": "error", "error": "OPENROUTER_API_KEY not set on server"})
+        import urllib.error as _ue3
+        tried = []
+        for model in _FREE_MODELS:
+            try:
+                payload = json.dumps({
+                    "model": model,
+                    "messages": [{"role": "user", "content": "Reply with exactly: ok"}],
+                    "max_tokens": 5,
+                }).encode()
+                req = urllib.request.Request(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    data=payload,
+                    headers={
+                        "Authorization": f"Bearer {OPENROUTER_KEY}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://chennai-vegetable-price-prediction.vercel.app",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    result = json.loads(resp.read())
+                reply = result["choices"][0]["message"]["content"].strip()
+                return _ok({
+                    "status": "ok",
+                    "model": model,
+                    "reply": reply,
+                    "key_prefix": OPENROUTER_KEY[:12] + "...",
+                })
+            except _ue3.HTTPError as e:
+                body = ""
+                try:
+                    body = e.read().decode()[:200]
+                except Exception:
+                    pass
+                tried.append({"model": model, "error": f"HTTP {e.code}", "body": body})
+                if e.code == 401:
+                    break  # Auth failure — no point trying other models
+            except Exception as e:
+                tried.append({"model": model, "error": str(e)})
+        return _ok({
+            "status": "error",
+            "tried": tried,
+            "key_prefix": OPENROUTER_KEY[:12] + "...",
+            "key_length": len(OPENROUTER_KEY),
+            "hint": "If error is 401, your OpenRouter API key is invalid. Get a new key at openrouter.ai/keys",
+        })
 
     if path == "/weather":
         try:
@@ -371,8 +417,31 @@ def _dispatch(path: str, qs: dict) -> tuple:
         if not veg_raw:
             return _err("vegetable parameter required")
         veg = veg_raw.lower().replace(" ", "_")
+        if not OPENROUTER_KEY:
+            # Fall back to seasonal ML prediction
+            try:
+                result = _predict(veg, market)
+                result["model_name"] = "seasonal_ml_fallback"
+                result["reasoning"] = "AI key not configured — using seasonal ML model. Update OPENROUTER_API_KEY to enable AI predictions."
+                result["weather_used"] = False
+                return _ok(result)
+            except Exception as fe:
+                return _err(f"No AI key and ML fallback failed: {fe}", 503)
         try:
             return _ok(_ai_predict(veg, market))
+        except ValueError as e:
+            err_msg = str(e)
+            if "invalid" in err_msg.lower() or "key" in err_msg.lower():
+                # Auth failure — fall back to ML prediction
+                try:
+                    result = _predict(veg, market)
+                    result["model_name"] = "seasonal_ml_fallback"
+                    result["reasoning"] = "AI key rejected by OpenRouter — using seasonal ML model. Please update the API key at openrouter.ai."
+                    result["weather_used"] = False
+                    return _ok(result)
+                except Exception:
+                    pass
+            return _err(err_msg, 502)
         except Exception as e:
             return _err(str(e), 500)
 
