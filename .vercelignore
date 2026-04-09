@@ -1,0 +1,15 @@
+venv/
+data/
+notebooks/
+tests/
+mobile/
+deployment/
+dump.rdb
+requirements-full.txt
+requirements-dev.txt
+requirements-vercel.txt
+*.pkl
+*.pt
+*.parquet
+__pycache__/
+.git/

@@ -1,0 +1,54 @@
+# ─── Core Data ────────────────────────────────────────────────────────────────
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.4.2
+scipy==1.13.0
+joblib==1.4.2
+
+# ─── ML Models ────────────────────────────────────────────────────────────────
+xgboost==2.0.3
+lightgbm==4.3.0
+prophet==1.1.5
+torch==2.3.0
+torchvision==0.18.0
+optuna==3.6.1
+einops==0.8.0
+
+# ─── Computer Vision ──────────────────────────────────────────────────────────
+ultralytics==8.2.0
+albumentations==1.4.6
+Pillow==10.3.0
+opencv-python-headless==4.9.0.80
+
+# ─── Backend ──────────────────────────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+sqlalchemy[asyncio]==2.0.30
+alembic==1.13.1
+asyncpg==0.29.0
+supabase==2.4.6
+redis==5.0.4
+APScheduler==3.10.4
+pydantic-settings==2.2.1
+python-multipart==0.0.9
+httpx==0.27.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+slowapi==0.1.9
+prometheus-fastapi-instrumentator==7.0.0
+
+# ─── Data Collection ──────────────────────────────────────────────────────────
+requests==2.31.0
+beautifulsoup4==4.12.3
+aiohttp==3.9.5
+opendatasets==0.1.22
+kaggle==1.6.14
+tqdm==4.66.4
+
+# ─── Utilities ────────────────────────────────────────────────────────────────
+python-dotenv==1.0.1
+PyYAML==6.0.1
+loguru==0.7.2
+tenacity==8.3.0
+pytz==2024.1
+holidays==0.47
