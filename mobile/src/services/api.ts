@@ -1,5 +1,4 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = 'https://chennai-vegetable-price-prediction.vercel.app';
 
@@ -53,6 +52,22 @@ export interface DashboardResponse {
   top_rising: Array<{ vegetable: string; change_pct: number; predicted_price: number }>;
   top_falling: Array<{ vegetable: string; change_pct: number; predicted_price: number }>;
   all_predictions: PredictionResponse[];
+}
+
+export interface WeatherResponse {
+  temperature: number;
+  feels_like: number;
+  humidity: number;
+  precipitation: number;
+  wind_speed: number;
+  condition: string;
+  weather_code: number;
+  location: string;
+}
+
+export interface AIPredictionResponse extends PredictionResponse {
+  reasoning: string;
+  weather_used: boolean;
 }
 
 // ── API functions ─────────────────────────────────────────────────────────────
@@ -121,6 +136,18 @@ export const api = {
     const { data } = await apiClient.get('/get-current-price/market-comparison', {
       params: { vegetable },
     });
+    return data;
+  },
+
+  async getWeather(): Promise<WeatherResponse> {
+    const { data } = await apiClient.get('/weather');
+    return data;
+  },
+
+  async aiPredict(vegetable: string, market?: string): Promise<AIPredictionResponse> {
+    const params: Record<string, string> = { vegetable };
+    if (market) params.market = market;
+    const { data } = await apiClient.get('/ai-predict', { params });
     return data;
   },
 };
