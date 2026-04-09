@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0f172a"
+      "backgroundColor": "#13131C"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -24,13 +24,15 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0f172a"
+        "backgroundColor": "#13131C"
       },
       "package": "com.vegprice.chennai",
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -81,6 +83,12 @@
           ]
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9e633a89-db26-4381-a792-d933d3b3fac5"
+      }
+    },
+    "owner": "nitheeshdr"
   }
 }
