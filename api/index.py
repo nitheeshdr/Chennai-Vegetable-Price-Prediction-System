@@ -149,6 +149,22 @@ def _dispatch(path: str, qs: dict) -> tuple:
     if path == "/vegetables":
         return _ok({"vegetables": VEGETABLES, "count": len(VEGETABLES)})
 
+    if path == "/docs":
+        return _ok({
+            "title": "Chennai Vegetable Price API",
+            "version": "1.0.0",
+            "endpoints": [
+                {"method": "GET", "path": "/health",                          "description": "Health check"},
+                {"method": "GET", "path": "/vegetables",                      "description": "List all supported vegetables"},
+                {"method": "GET", "path": "/predict?vegetable=tomato",        "description": "Next-day price prediction"},
+                {"method": "GET", "path": "/get-current-price?vegetable=tomato", "description": "Current market price"},
+                {"method": "GET", "path": "/get-current-price/market-comparison?vegetable=tomato", "description": "Price comparison across markets"},
+                {"method": "GET", "path": "/weekly-forecast?vegetable=tomato","description": "7-day price forecast"},
+                {"method": "GET", "path": "/dashboard",                       "description": "Summary for all vegetables"},
+            ],
+            "optional_param": "market=koyambedu (for predict, get-current-price, weekly-forecast)",
+        })
+
     if path == "/get-current-price":
         veg_raw = q("vegetable", "")
         market = q("market")
