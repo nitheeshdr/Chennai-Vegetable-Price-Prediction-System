@@ -1,5 +1,6 @@
 venv/
 pyproject.toml
+requirements.txt
 data/
 notebooks/
 tests/
