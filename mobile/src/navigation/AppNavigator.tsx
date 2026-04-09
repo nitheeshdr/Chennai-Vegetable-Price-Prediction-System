@@ -6,39 +6,57 @@ import { Ionicons } from '@expo/vector-icons';
 
 import HomeScreen from '../screens/HomeScreen';
 import ScanScreen from '../screens/ScanScreen';
-import ResultScreen from '../screens/ResultScreen';
 import TrendsScreen from '../screens/TrendsScreen';
-import ForecastScreen from '../screens/ForecastScreen';
 import AlertsScreen from '../screens/AlertsScreen';
+import ResultScreen from '../screens/ResultScreen';
+import ForecastScreen from '../screens/ForecastScreen';
+import AdminScreen from '../screens/AdminScreen';
+import { C } from '../theme';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+
+const TAB_ICONS: Record<string, [string, string]> = {
+  Home:    ['home', 'home-outline'],
+  Scan:    ['camera', 'camera-outline'],
+  Trends:  ['trending-up', 'trending-up-outline'],
+  Alerts:  ['notifications', 'notifications-outline'],
+  Admin:   ['settings', 'settings-outline'],
+};
+
+const HEADER = {
+  headerStyle: { backgroundColor: '#0a1628', borderBottomWidth: 0 } as any,
+  headerTintColor: C.text,
+  headerTitleStyle: { fontWeight: '700' as const, color: C.text },
+  headerShadowVisible: false,
+};
 
 function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          const icons: Record<string, string> = {
-            Home: focused ? 'home' : 'home-outline',
-            Scan: focused ? 'camera' : 'camera-outline',
-            Trends: focused ? 'trending-up' : 'trending-up-outline',
-            Alerts: focused ? 'notifications' : 'notifications-outline',
-          };
-          return <Ionicons name={(icons[route.name] || 'ellipse') as any} size={size} color={color} />;
+          const [active, inactive] = TAB_ICONS[route.name] ?? ['ellipse', 'ellipse-outline'];
+          return <Ionicons name={(focused ? active : inactive) as any} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#22c55e',
-        tabBarInactiveTintColor: '#9ca3af',
-        tabBarStyle: { backgroundColor: '#1a1a2e', borderTopColor: '#374151' },
-        headerStyle: { backgroundColor: '#1a1a2e' },
-        headerTintColor: '#f9fafb',
-        headerTitleStyle: { fontWeight: 'bold' },
+        tabBarActiveTintColor: C.indigo,
+        tabBarInactiveTintColor: C.text3,
+        tabBarStyle: {
+          backgroundColor: '#0a1628',
+          borderTopColor: C.border,
+          borderTopWidth: 1,
+          height: 60,
+          paddingBottom: 8,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        ...HEADER,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'VegPrice' }} />
-      <Tab.Screen name="Scan" component={ScanScreen} options={{ title: 'Scan Vegetable' }} />
-      <Tab.Screen name="Trends" component={TrendsScreen} options={{ title: 'Price Trends' }} />
-      <Tab.Screen name="Alerts" component={AlertsScreen} options={{ title: 'Price Alerts' }} />
+      <Tab.Screen name="Home"   component={HomeScreen}   options={{ title: 'VegPrice AI', headerShown: false }} />
+      <Tab.Screen name="Scan"   component={ScanScreen}   options={{ title: 'Scan' }} />
+      <Tab.Screen name="Trends" component={TrendsScreen} options={{ title: 'Trends' }} />
+      <Tab.Screen name="Alerts" component={AlertsScreen} options={{ title: 'Alerts' }} />
+      <Tab.Screen name="Admin"  component={AdminScreen}  options={{ title: 'Control', headerShown: false }} />
     </Tab.Navigator>
   );
 }
@@ -51,22 +69,12 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Result"
           component={ResultScreen}
-          options={{
-            headerShown: true,
-            title: 'Scan Result',
-            headerStyle: { backgroundColor: '#1a1a2e' },
-            headerTintColor: '#f9fafb',
-          }}
+          options={{ headerShown: true, title: 'Scan Result', ...HEADER }}
         />
         <Stack.Screen
           name="Forecast"
           component={ForecastScreen}
-          options={{
-            headerShown: true,
-            title: 'Weekly Forecast',
-            headerStyle: { backgroundColor: '#1a1a2e' },
-            headerTintColor: '#f9fafb',
-          }}
+          options={{ headerShown: true, title: 'Weekly Forecast', ...HEADER }}
         />
       </Stack.Navigator>
     </NavigationContainer>
