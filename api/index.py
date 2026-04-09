@@ -74,16 +74,30 @@ def _predict(veg: str, market: Optional[str], days: int = 1) -> Optional[dict]:
     if current is None:
         return None
     fd = date.today() + timedelta(days=days)
-    factor = 1.0 + 0.04 * math.sin(2 * math.pi * (fd.month - 3) / 12)
+
+    # Day-of-year seasonality — daily resolution so each forecast day differs
+    doy = fd.timetuple().tm_yday
+    seasonal = 0.06 * math.sin(2 * math.pi * (doy - 90) / 365)  # peaks ~Jun
+
+    # Day-of-week effect: Mon/Fri higher (wholesale arrival days), Wed cheapest
+    dow_effect = [0.015, 0.008, -0.010, -0.005, 0.012, 0.022, 0.018][fd.weekday()]
+
+    # Short-term mean reversion: slight pull toward base over multi-day horizon
+    reversion = -0.004 * (days - 1)
+
+    factor = 1.0 + seasonal + dow_effect + reversion
     predicted = round(current * factor, 2)
+
+    # Confidence interval widens with forecast horizon (uncertainty grows)
+    margin = 0.08 + 0.015 * days
     tr = _trend(current, predicted)
     return {
         "vegetable": veg,
         "prediction_date": str(fd),
         "current_price": current,
         "predicted_price": predicted,
-        "confidence_lower": round(predicted * 0.88, 2),
-        "confidence_upper": round(predicted * 1.12, 2),
+        "confidence_lower": round(predicted * (1 - margin), 2),
+        "confidence_upper": round(predicted * (1 + margin), 2),
         "trend": tr,
         "trend_emoji": {"up": "↑", "down": "↓", "stable": "→"}.get(tr, "→"),
         "model_name": "seasonal_ensemble",
