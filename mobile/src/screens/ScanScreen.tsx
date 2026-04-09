@@ -179,7 +179,7 @@ export default function ScanScreen({ navigation }: any) {
       </View>
 
       <Text variant="labelSmall" style={[s.hint, { bottom: insets.bottom + SP.sm }]}>
-        Powered by Llama 3.2 Vision · Free model
+        Powered by NVIDIA NIM · Llama 3.2 Vision
       </Text>
     </View>
   );

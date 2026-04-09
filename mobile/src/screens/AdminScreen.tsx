@@ -92,8 +92,8 @@ export default function AdminScreen() {
   const STATUS_ROWS = [
     { label: 'Vercel API',    value: 'Online',                  icon: 'check-circle',   color: C.green   },
     { label: 'Supabase DB',   value: 'Connected',               icon: 'database-check', color: C.green   },
-    { label: 'AI Model',      value: 'Llama 3 · Free',          icon: 'brain',          color: C.primary },
-    { label: 'Vision Model',  value: 'Llama 3.2 Vision · Free', icon: 'eye',            color: C.primary },
+    { label: 'AI Model',      value: 'NVIDIA NIM · Llama 3.1',         icon: 'brain', color: C.primary },
+    { label: 'Vision Model',  value: 'NVIDIA NIM · Llama 3.2 Vision', icon: 'eye',   color: C.primary },
     { label: 'Auto-Retrain',  value: 'Daily 6:00 AM',           icon: 'clock-outline',  color: C.amber   },
   ];
 

@@ -1,6 +1,6 @@
 """
 Vercel serverless handler — zero external dependencies, Python stdlib only.
-Uses urllib.request for Supabase REST, Open-Meteo weather, and OpenRouter AI.
+Uses urllib.request for Supabase REST, Open-Meteo weather, and NVIDIA NIM AI.
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ SUPABASE_KEY = (
     os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     or os.environ.get("SUPABASE_ANON_KEY", "")
 )
-OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+NVIDIA_KEY = os.environ.get("NVIDIA_API_KEY", "")
 
 VEGETABLES = [
     "tomato", "onion", "potato", "garlic", "ginger", "green_chilli",
@@ -138,34 +138,32 @@ def _predict(veg: str, market: Optional[str], days: int = 1) -> Optional[dict]:
     }
 
 
-# ── OpenRouter AI prediction ──────────────────────────────────────────────────
-_FREE_MODELS = [
-    "meta-llama/llama-3.2-3b-instruct:free",   # small, fast
-    "meta-llama/llama-3.3-70b-instruct:free",   # large, capable
-    "deepseek/deepseek-chat-v3-0324:free",       # DeepSeek v3
-    "google/gemini-2.0-flash-exp:free",          # Gemini Flash
-    "microsoft/phi-4:free",                      # Phi-4
-    "qwen/qwen3-8b:free",                        # Qwen 3 8B
-    "mistralai/mistral-small-3.1-24b-instruct:free",  # Mistral Small
+# ── NVIDIA NIM AI prediction ──────────────────────────────────────────────────
+_NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+
+_NIM_MODELS = [
+    "meta/llama-3.1-8b-instruct",            # fast, small
+    "meta/llama-3.3-70b-instruct",            # large, capable
+    "nvidia/llama-3.1-nemotron-70b-instruct", # NVIDIA optimized
+    "mistralai/mistral-7b-instruct-v0.3",     # Mistral 7B
+    "microsoft/phi-3-mini-128k-instruct",     # Phi-3 mini
 ]
 
-def _call_openrouter(payload_dict: dict, timeout: int = 25) -> dict:
-    """Try free models in order until one succeeds. Retries 429, skips 404, raises on 401."""
+def _call_nvidia(payload_dict: dict, timeout: int = 25) -> dict:
+    """Try NVIDIA NIM models in order until one succeeds."""
     import urllib.error as _ue
     import time as _time
     last_err = None
-    models_to_try = [payload_dict["model"]] + [m for m in _FREE_MODELS if m != payload_dict["model"]]
+    models_to_try = [payload_dict["model"]] + [m for m in _NIM_MODELS if m != payload_dict["model"]]
     for model in models_to_try:
         payload_dict["model"] = model
         payload = json.dumps(payload_dict).encode()
         req = urllib.request.Request(
-            "https://openrouter.ai/api/v1/chat/completions",
+            _NVIDIA_URL,
             data=payload,
             headers={
-                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Authorization": f"Bearer {NVIDIA_KEY}",
                 "Content-Type": "application/json",
-                "HTTP-Referer": "https://chennai-vegetable-price-prediction.vercel.app",
-                "X-Title": "Chennai Vegetable Price AI",
             },
             method="POST",
         )
@@ -176,13 +174,13 @@ def _call_openrouter(payload_dict: dict, timeout: int = 25) -> dict:
             return result
         except _ue.HTTPError as e:
             if e.code == 401:
-                raise ValueError("OpenRouter API key is invalid. Please update OPENROUTER_API_KEY at openrouter.ai")
+                raise ValueError("NVIDIA API key is invalid. Please update NVIDIA_API_KEY.")
             if e.code == 429:
-                _time.sleep(1)  # brief back-off then try next model
+                _time.sleep(1)
             last_err = e
         except Exception as e:
             last_err = e
-    raise last_err or ValueError("All OpenRouter models failed")
+    raise last_err or ValueError("All NVIDIA NIM models failed")
 
 
 def _ai_predict(veg: str, market: Optional[str]) -> dict:
@@ -217,8 +215,8 @@ def _ai_predict(veg: str, market: Optional[str]) -> dict:
         f'"reasoning": "<max 2 sentences>" }}'
     )
 
-    result = _call_openrouter({
-        "model": _FREE_MODELS[0],
+    result = _call_nvidia({
+        "model": _NIM_MODELS[0],
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 250,
         "temperature": 0.2,
@@ -240,15 +238,15 @@ def _ai_predict(veg: str, market: Optional[str]) -> dict:
         "trend": tr,
         "trend_emoji": {"up": "↑", "down": "↓", "stable": "→"}.get(tr, "→"),
         "reasoning": ai.get("reasoning", ""),
-        "model_name": result.get("_model_used", "openrouter/free"),
+        "model_name": result.get("_model_used", "nvidia/nim"),
         "weather_used": bool(weather_ctx),
     }
 
 
 def _scan_image(image_b64: str) -> dict:
-    """Identify vegetable from base64 image using free vision model."""
-    if not OPENROUTER_KEY:
-        raise ValueError("OPENROUTER_API_KEY not set")
+    """Identify vegetable from base64 image using NVIDIA NIM vision model."""
+    if not NVIDIA_KEY:
+        raise ValueError("NVIDIA_API_KEY not set")
 
     prompt = (
         "You are a vegetable recognition expert. Look at this image and identify the vegetable.\n"
@@ -264,7 +262,7 @@ def _scan_image(image_b64: str) -> dict:
 
     import urllib.error as _ue2
     payload_dict = {
-        "model": "meta-llama/llama-3.2-11b-vision-instruct:free",
+        "model": "meta/llama-3.2-11b-vision-instruct",
         "messages": [{
             "role": "user",
             "content": [
@@ -277,13 +275,11 @@ def _scan_image(image_b64: str) -> dict:
     }
     payload = json.dumps(payload_dict).encode()
     req = urllib.request.Request(
-        "https://openrouter.ai/api/v1/chat/completions",
+        _NVIDIA_URL,
         data=payload,
         headers={
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
+            "Authorization": f"Bearer {NVIDIA_KEY}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://chennai-vegetable-price-prediction.vercel.app",
-            "X-Title": "Chennai Vegetable Price AI",
         },
         method="POST",
     )
@@ -292,7 +288,7 @@ def _scan_image(image_b64: str) -> dict:
             result = json.loads(resp.read())
     except _ue2.HTTPError as e:
         if e.code == 401:
-            raise ValueError("OpenRouter API key is invalid. Please update it at openrouter.ai and redeploy.")
+            raise ValueError("NVIDIA API key is invalid. Please update NVIDIA_API_KEY and redeploy.")
         raise
 
     content = result["choices"][0]["message"]["content"].strip()
@@ -350,11 +346,11 @@ def _dispatch(path: str, qs: dict) -> tuple:
         return _ok({"status": "ok", "platform": "vercel", "supabase": bool(SUPABASE_URL)})
 
     if path == "/test-ai":
-        if not OPENROUTER_KEY:
-            return _ok({"status": "error", "error": "OPENROUTER_API_KEY not set on server"})
+        if not NVIDIA_KEY:
+            return _ok({"status": "error", "error": "NVIDIA_API_KEY not set on server"})
         import urllib.error as _ue3
         tried = []
-        for model in _FREE_MODELS:
+        for model in _NIM_MODELS:
             try:
                 payload = json.dumps({
                     "model": model,
@@ -362,12 +358,11 @@ def _dispatch(path: str, qs: dict) -> tuple:
                     "max_tokens": 5,
                 }).encode()
                 req = urllib.request.Request(
-                    "https://openrouter.ai/api/v1/chat/completions",
+                    _NVIDIA_URL,
                     data=payload,
                     headers={
-                        "Authorization": f"Bearer {OPENROUTER_KEY}",
+                        "Authorization": f"Bearer {NVIDIA_KEY}",
                         "Content-Type": "application/json",
-                        "HTTP-Referer": "https://chennai-vegetable-price-prediction.vercel.app",
                     },
                     method="POST",
                 )
@@ -378,7 +373,7 @@ def _dispatch(path: str, qs: dict) -> tuple:
                     "status": "ok",
                     "model": model,
                     "reply": reply,
-                    "key_prefix": OPENROUTER_KEY[:12] + "...",
+                    "key_prefix": NVIDIA_KEY[:12] + "...",
                 })
             except _ue3.HTTPError as e:
                 body = ""
@@ -394,9 +389,9 @@ def _dispatch(path: str, qs: dict) -> tuple:
         return _ok({
             "status": "error",
             "tried": tried,
-            "key_prefix": OPENROUTER_KEY[:12] + "...",
-            "key_length": len(OPENROUTER_KEY),
-            "hint": "If error is 401, your OpenRouter API key is invalid. Get a new key at openrouter.ai/keys",
+            "key_prefix": NVIDIA_KEY[:12] + "...",
+            "key_length": len(NVIDIA_KEY),
+            "hint": "If error is 401, your NVIDIA API key is invalid. Get a key at build.nvidia.com",
         })
 
     if path == "/weather":
@@ -410,8 +405,8 @@ def _dispatch(path: str, qs: dict) -> tuple:
         image_b64 = body.get("image_base64", "") if isinstance(body, dict) else ""
         if not image_b64:
             return _err("image_base64 required", 400)
-        if not OPENROUTER_KEY:
-            return _err("OPENROUTER_API_KEY not configured on server", 503)
+        if not NVIDIA_KEY:
+            return _err("NVIDIA_API_KEY not configured on server", 503)
         try:
             return _ok(_scan_image(image_b64))
         except Exception as e:
@@ -423,12 +418,12 @@ def _dispatch(path: str, qs: dict) -> tuple:
         if not veg_raw:
             return _err("vegetable parameter required")
         veg = veg_raw.lower().replace(" ", "_")
-        if not OPENROUTER_KEY:
+        if not NVIDIA_KEY:
             # Fall back to seasonal ML prediction
             try:
                 result = _predict(veg, market)
                 result["model_name"] = "seasonal_ml_fallback"
-                result["reasoning"] = "AI key not configured — using seasonal ML model. Update OPENROUTER_API_KEY to enable AI predictions."
+                result["reasoning"] = "AI key not configured — using seasonal ML model. Update NVIDIA_API_KEY to enable AI predictions."
                 result["weather_used"] = False
                 return _ok(result)
             except Exception as fe:
@@ -442,7 +437,7 @@ def _dispatch(path: str, qs: dict) -> tuple:
                 try:
                     result = _predict(veg, market)
                     result["model_name"] = "seasonal_ml_fallback"
-                    result["reasoning"] = "AI key rejected by OpenRouter — using seasonal ML model. Please update the API key at openrouter.ai."
+                    result["reasoning"] = "AI key rejected by NVIDIA NIM — using seasonal ML model. Please update NVIDIA_API_KEY."
                     result["weather_used"] = False
                     return _ok(result)
                 except Exception:
@@ -497,7 +492,7 @@ def _dispatch(path: str, qs: dict) -> tuple:
                 {"method": "GET", "path": "/weather",                                     "description": "Current Chennai weather"},
                 {"method": "GET", "path": "/vegetables",                                  "description": "List all supported vegetables"},
                 {"method": "GET", "path": "/predict?vegetable=tomato",                    "description": "Seasonal model prediction"},
-                {"method": "GET", "path": "/ai-predict?vegetable=tomato",                 "description": "AI-powered prediction via OpenRouter GPT-4o-mini"},
+                {"method": "GET", "path": "/ai-predict?vegetable=tomato",                 "description": "AI-powered prediction via NVIDIA NIM (Llama 3.1)"},
                 {"method": "GET", "path": "/get-current-price?vegetable=tomato",          "description": "Current market price"},
                 {"method": "GET", "path": "/get-current-price/market-comparison?vegetable=tomato", "description": "Price comparison across markets"},
                 {"method": "GET", "path": "/weekly-forecast?vegetable=tomato",            "description": "7-day price forecast"},
