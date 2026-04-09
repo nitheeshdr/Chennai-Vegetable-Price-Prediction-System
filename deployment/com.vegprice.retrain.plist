@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.vegprice.retrain</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/nitheeshdr/Downloads/Girish/model/venv/bin/python</string>
+        <string>/Users/nitheeshdr/Downloads/Girish/model/scripts/daily_retrain.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/nitheeshdr/Downloads/Girish/model</string>
+
+    <!-- Run every day at 06:00 AM -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>6</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/nitheeshdr/Downloads/Girish/model/logs/launchd_stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/nitheeshdr/Downloads/Girish/model/logs/launchd_stderr.log</string>
+
+    <!-- Restart on crash -->
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Run even if missed (e.g. Mac was asleep) -->
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

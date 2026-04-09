@@ -42,7 +42,8 @@ def _build_models(params: dict, include_deep: bool = True, include_lstm: bool = 
         RandomForestModel(params.get("random_forest")),
         XGBoostModel(params.get("xgboost")),
         LightGBMModel(params.get("lightgbm")),
-        ProphetModel(params.get("prophet")),
+        # ProphetModel disabled — pystan incompatible with Python 3.11
+        # ProphetModel(params.get("prophet")),
     ]
     if include_lstm:
         models.append(LSTMModel(params.get("lstm")))
