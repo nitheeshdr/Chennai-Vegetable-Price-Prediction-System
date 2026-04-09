@@ -340,7 +340,12 @@ def _dispatch(path: str, qs: dict) -> tuple:
                 "key_prefix": OPENROUTER_KEY[:12] + "...",
             })
         except Exception as e:
-            return _err(f"AI connection failed: {e}", 502)
+            return _ok({
+                "status": "error",
+                "error": str(e),
+                "key_prefix": (OPENROUTER_KEY[:12] + "...") if OPENROUTER_KEY else "NOT_SET",
+                "key_length": len(OPENROUTER_KEY),
+            })
 
     if path == "/weather":
         try:
