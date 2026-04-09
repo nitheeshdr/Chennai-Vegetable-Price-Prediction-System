@@ -141,14 +141,17 @@ def _predict(veg: str, market: Optional[str], days: int = 1) -> Optional[dict]:
 # ── OpenRouter AI prediction ──────────────────────────────────────────────────
 _FREE_MODELS = [
     "meta-llama/llama-3.2-3b-instruct:free",
-    "google/gemma-2-9b-it:free",
-    "mistralai/mistral-7b-instruct:free",
-    "qwen/qwen-2.5-7b-instruct:free",
+    "meta-llama/llama-3.1-8b-instruct:free",
+    "microsoft/phi-3-mini-128k-instruct:free",
+    "google/gemma-3-1b-it:free",
+    "deepseek/deepseek-r1-distill-qwen-7b:free",
+    "qwen/qwen-2-7b-instruct:free",
 ]
 
-def _call_openrouter(payload_dict: dict, timeout: int = 20) -> dict:
-    """Try free models in order until one succeeds. Raises on auth error."""
+def _call_openrouter(payload_dict: dict, timeout: int = 25) -> dict:
+    """Try free models in order until one succeeds. Retries 429, skips 404, raises on 401."""
     import urllib.error as _ue
+    import time as _time
     last_err = None
     models_to_try = [payload_dict["model"]] + [m for m in _FREE_MODELS if m != payload_dict["model"]]
     for model in models_to_try:
@@ -173,6 +176,8 @@ def _call_openrouter(payload_dict: dict, timeout: int = 20) -> dict:
         except _ue.HTTPError as e:
             if e.code == 401:
                 raise ValueError("OpenRouter API key is invalid. Please update OPENROUTER_API_KEY at openrouter.ai")
+            if e.code == 429:
+                _time.sleep(1)  # brief back-off then try next model
             last_err = e
         except Exception as e:
             last_err = e

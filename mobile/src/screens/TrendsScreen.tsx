@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { View, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+  Surface, Text, Card, Chip, ActivityIndicator, Divider,
+} from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { C, TREND } from '../theme';
 
@@ -14,12 +16,14 @@ const VEGETABLES = [
 const W = Dimensions.get('window').width;
 
 export default function TrendsScreen() {
-  const [selected, setSelected] = useState('tomato');
-  const [forecast, setForecast] = useState<any>(null);
-  const [loading, setLoading]   = useState(false);
+  const insets                    = useSafeAreaInsets();
+  const [selected, setSelected]   = useState('tomato');
+  const [forecast, setForecast]   = useState<any>(null);
+  const [loading,  setLoading]    = useState(false);
 
   useEffect(() => {
     setLoading(true);
+    setForecast(null);
     api.getWeeklyForecast(selected)
       .then(setForecast).catch(() => setForecast(null))
       .finally(() => setLoading(false));
@@ -30,125 +34,167 @@ export default function TrendsScreen() {
   const maxPrice = prices.length ? Math.max(...prices) : 0;
   const minPrice = prices.length ? Math.min(...prices) : 0;
   const first    = forecast?.forecast?.[0];
-  const t        = first ? TREND[first.trend as keyof typeof TREND] || TREND.stable : TREND.stable;
+  const t        = first ? TREND[first.trend as string] || TREND.stable : TREND.stable;
+
+  const STAT_BOXES = [
+    { label: '7-Day High', val: `₹${maxPrice.toFixed(0)}`, color: C.red   },
+    { label: '7-Day Low',  val: `₹${minPrice.toFixed(0)}`, color: C.green },
+    { label: 'Trend',      val: first?.trend ?? '—',        color: t.color },
+    { label: 'Swing',      val: `₹${(maxPrice - minPrice).toFixed(0)}`, color: C.amber },
+  ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={['#0a1628', C.bg]} style={styles.hero}>
-        <Text style={styles.heroTitle}>Price Trends</Text>
-        <Text style={styles.heroSub}>7-day forecast comparison</Text>
-      </LinearGradient>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* App Bar */}
+      <Surface style={styles.appbar} elevation={0}>
+        <Text variant="headlineMedium" style={styles.appTitle}>Price Trends</Text>
+        <Text variant="labelMedium" style={{ color: C.text3 }}>7-day forecast comparison</Text>
+      </Surface>
 
-      {/* Vegetable Selector */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipRow}>
-        {VEGETABLES.map(veg => (
-          <TouchableOpacity key={veg} onPress={() => setSelected(veg)} activeOpacity={0.7}>
-            <LinearGradient
-              colors={selected === veg ? ['#6366f1', '#4f46e5'] : [C.card, C.card]}
-              style={[styles.chip, selected === veg && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, selected === veg && styles.chipTextActive]}>
-                {veg.replace(/_/g, ' ')}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
 
-      {loading && (
-        <View style={styles.loadWrap}>
-          <ActivityIndicator size="large" color={C.indigo} />
-        </View>
-      )}
-
-      {!loading && forecast && prices.length > 0 && (
-        <>
-          <View style={styles.statsRow}>
-            {[
-              { label: 'High', val: `₹${maxPrice.toFixed(0)}`, color: C.red },
-              { label: 'Low',  val: `₹${minPrice.toFixed(0)}`, color: C.green },
-              { label: 'Trend', val: first?.trend ?? '—', color: t.color },
-              { label: 'Swing', val: `₹${(maxPrice - minPrice).toFixed(0)}`, color: C.amber },
-            ].map(s => (
-              <View key={s.label} style={styles.statBox}>
-                <Text style={[styles.statNum, { color: s.color }]}>{s.val}</Text>
-                <Text style={styles.statLabel}>{s.label}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>
-              {selected.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} — Next 7 Days
-            </Text>
-            <LineChart
-              data={{ labels, datasets: [{ data: prices, strokeWidth: 2 }] }}
-              width={W - 64}
-              height={180}
-              chartConfig={{
-                backgroundColor: C.card,
-                backgroundGradientFrom: C.card,
-                backgroundGradientTo: C.card,
-                decimalPlaces: 0,
-                color: () => t.color,
-                labelColor: () => C.text3,
-                propsForDots: { r: '5', strokeWidth: '2', stroke: t.color },
-                propsForBackgroundLines: { stroke: C.border },
+        {/* Vegetable selector */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipRow}
+        >
+          {VEGETABLES.map(veg => (
+            <Chip
+              key={veg}
+              selected={selected === veg}
+              onPress={() => setSelected(veg)}
+              style={[
+                styles.vegChip,
+                { backgroundColor: selected === veg ? `${C.primary}28` : C.surface },
+              ]}
+              textStyle={{
+                color:      selected === veg ? C.primary : C.text2,
+                fontWeight: selected === veg ? '700' : '400',
+                fontSize:   13,
+                textTransform: 'capitalize',
               }}
-              bezier withShadow={false}
-              style={{ borderRadius: 12 }}
-            />
-          </View>
+              showSelectedCheck={false}
+              elevated={selected === veg}
+            >
+              {veg.replace(/_/g, ' ')}
+            </Chip>
+          ))}
+        </ScrollView>
 
-          <View style={styles.dayList}>
-            {forecast.forecast.map((f: any, i: number) => {
-              const dt = TREND[f.trend as keyof typeof TREND] || TREND.stable;
-              return (
-                <View key={f.prediction_date} style={styles.dayRow}>
-                  <View style={styles.dayNum}><Text style={styles.dayNumText}>D{i + 1}</Text></View>
-                  <Text style={styles.dayDate}>{f.prediction_date}</Text>
-                  <View style={{ flex: 1 }} />
-                  <Text style={styles.dayEmoji}>{f.trend_emoji}</Text>
-                  <Text style={[styles.dayPrice, { color: dt.color }]}>₹{f.predicted_price.toFixed(0)}</Text>
-                </View>
-              );
-            })}
+        {/* Loading */}
+        {loading && (
+          <View style={styles.loadCenter}>
+            <ActivityIndicator size="large" color={C.primary} />
           </View>
-        </>
-      )}
+        )}
 
-      {!loading && !forecast && (
-        <Text style={styles.empty}>No forecast data available.</Text>
-      )}
-      <View style={{ height: 30 }} />
-    </ScrollView>
+        {/* Stats row */}
+        {!loading && prices.length > 0 && (
+          <>
+            <View style={styles.statsRow}>
+              {STAT_BOXES.map(s => (
+                <Surface key={s.label} style={styles.statBox} elevation={1}>
+                  <Text variant="titleLarge" style={{ color: s.color, fontWeight: '800' }}>{s.val}</Text>
+                  <Text variant="labelSmall" style={{ color: C.text3, marginTop: 4, textTransform: 'capitalize' }}>{s.label}</Text>
+                </Surface>
+              ))}
+            </View>
+
+            {/* Chart */}
+            <Card style={styles.chartCard}>
+              <Card.Content>
+                <Text variant="titleSmall" style={{ color: C.text2, fontWeight: '700', marginBottom: 12, textTransform: 'capitalize' }}>
+                  {selected.replace(/_/g, ' ')} — Next 7 Days
+                </Text>
+                <LineChart
+                  data={{ labels, datasets: [{ data: prices, strokeWidth: 2 }] }}
+                  width={W - 80}
+                  height={190}
+                  chartConfig={{
+                    backgroundColor:         C.surface2,
+                    backgroundGradientFrom:  C.surface2,
+                    backgroundGradientTo:    C.surface2,
+                    decimalPlaces:           0,
+                    color:                   () => t.color,
+                    labelColor:              () => C.text3,
+                    propsForDots:            { r: '5', strokeWidth: '2', stroke: t.color },
+                    propsForBackgroundLines: { stroke: C.border },
+                  }}
+                  bezier
+                  withShadow={false}
+                  style={{ borderRadius: 12 }}
+                />
+              </Card.Content>
+            </Card>
+
+            {/* Day list */}
+            <Text variant="titleSmall" style={styles.dayLabel}>Day-by-Day</Text>
+            <Surface style={styles.dayListSurface} elevation={1}>
+              {forecast.forecast.map((f: any, idx: number) => {
+                const dt = TREND[f.trend as string] || TREND.stable;
+                return (
+                  <View key={f.prediction_date}>
+                    <View style={styles.dayRow}>
+                      <Surface style={[styles.dayBadge, { backgroundColor: `${dt.color}20` }]} elevation={0}>
+                        <Text variant="labelSmall" style={{ color: dt.color, fontWeight: '800' }}>D{idx + 1}</Text>
+                      </Surface>
+                      <View style={{ flex: 1 }}>
+                        <Text variant="bodyMedium" style={{ color: C.text }}>{f.prediction_date}</Text>
+                        <Text variant="labelSmall" style={{ color: C.text3 }}>
+                          ₹{f.confidence_lower?.toFixed(0)} – ₹{f.confidence_upper?.toFixed(0)}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 18, marginRight: 8 }}>{dt.emoji}</Text>
+                      <Text variant="titleMedium" style={{ color: dt.color, fontWeight: '800', minWidth: 60, textAlign: 'right' }}>
+                        ₹{f.predicted_price.toFixed(0)}
+                      </Text>
+                    </View>
+                    {idx < forecast.forecast.length - 1 && (
+                      <Divider style={{ backgroundColor: C.border, marginLeft: 54 }} />
+                    )}
+                  </View>
+                );
+              })}
+            </Surface>
+          </>
+        )}
+
+        {!loading && !forecast && (
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="chart-line-variant" size={56} color={C.text3} />
+            <Text variant="bodyLarge" style={{ color: C.text3, marginTop: 12 }}>No forecast data available</Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  hero: { paddingTop: 20, paddingBottom: 20, paddingHorizontal: 20 },
-  heroTitle: { fontSize: 24, fontWeight: '800', color: C.text },
-  heroSub: { color: C.text3, fontSize: 13, marginTop: 4 },
+  appbar:    { backgroundColor: C.surface, paddingHorizontal: 20, paddingBottom: 16, paddingTop: 12 },
+  appTitle:  { color: C.text, fontWeight: '800' },
+
   chipScroll: { marginVertical: 12 },
-  chipRow: { paddingHorizontal: 16, gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: C.border },
-  chipActive: { borderColor: 'transparent' },
-  chipText: { color: C.text2, fontSize: 13, fontWeight: '500', textTransform: 'capitalize' },
-  chipTextActive: { color: '#fff', fontWeight: '700' },
-  loadWrap: { alignItems: 'center', marginTop: 60 },
+  chipRow:    { paddingHorizontal: 16, gap: 8 },
+  vegChip:    { borderRadius: 20 },
+
+  loadCenter: { alignItems: 'center', marginTop: 60 },
+
   statsRow: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 14, gap: 8 },
-  statBox: { flex: 1, backgroundColor: C.card, borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: C.border },
-  statNum: { fontSize: 18, fontWeight: '800' },
-  statLabel: { color: C.text3, fontSize: 10, marginTop: 2 },
-  chartCard: { marginHorizontal: 16, marginBottom: 14, backgroundColor: C.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.border },
-  chartTitle: { color: C.text2, fontSize: 13, fontWeight: '600', marginBottom: 12 },
-  dayList: { marginHorizontal: 16, backgroundColor: C.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: C.border },
-  dayRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: C.border },
-  dayNum: { backgroundColor: C.card2, borderRadius: 8, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  dayNumText: { color: C.text3, fontSize: 11, fontWeight: '700' },
-  dayDate: { color: C.text2, fontSize: 13 },
-  dayEmoji: { fontSize: 16 },
-  dayPrice: { fontSize: 16, fontWeight: '700', minWidth: 55, textAlign: 'right' },
-  empty: { color: C.text3, textAlign: 'center', marginTop: 60, fontSize: 15 },
+  statBox:  {
+    flex: 1, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 8,
+    borderRadius: 16, backgroundColor: C.surface,
+  },
+
+  chartCard: { marginHorizontal: 16, marginBottom: 14, backgroundColor: C.surface, borderRadius: 20 },
+
+  dayLabel:       { color: C.text2, fontWeight: '700', marginHorizontal: 16, marginBottom: 8 },
+  dayListSurface: { marginHorizontal: 16, borderRadius: 20, overflow: 'hidden', backgroundColor: C.surface },
+  dayRow:         { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14, paddingHorizontal: 16 },
+  dayBadge:       { borderRadius: 10, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+
+  emptyState: { alignItems: 'center', marginTop: 80 },
 });

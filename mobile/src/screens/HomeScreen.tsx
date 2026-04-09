@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { View, ScrollView, RefreshControl, StyleSheet } from 'react-native';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, RefreshControl, ActivityIndicator,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+  Surface, Text, Card, Chip, Divider, ActivityIndicator,
+  IconButton,
+} from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePriceStore } from '../store/priceStore';
-import PriceCard from '../components/PriceCard';
 import { api, WeatherResponse } from '../services/api';
-import { C } from '../theme';
+import { C, TREND } from '../theme';
 
 const WMO_EMOJI: Record<number, string> = {
   0: '☀️', 1: '🌤', 2: '⛅', 3: '☁️',
@@ -17,270 +17,309 @@ const WMO_EMOJI: Record<number, string> = {
   95: '⛈', 96: '⛈', 99: '⛈',
 };
 
-function WeatherBanner({ weather }: { weather: WeatherResponse }) {
-  const emoji = WMO_EMOJI[weather.weather_code] ?? '🌡';
+function WeatherCard({ weather }: { weather: WeatherResponse }) {
+  const emoji     = WMO_EMOJI[weather.weather_code] ?? '🌡';
   const rainAlert = (weather.precipitation ?? 0) > 5;
-
   return (
-    <LinearGradient
-      colors={['#0c2a5e', '#0f1d35']}
-      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      style={styles.weatherCard}
-    >
-      <View style={styles.weatherTop}>
-        <View style={styles.weatherMain}>
-          <Text style={styles.weatherEmoji}>{emoji}</Text>
-          <View>
-            <Text style={styles.weatherTemp}>{weather.temperature}°C</Text>
-            <Text style={styles.weatherCondition}>{weather.condition}</Text>
-            <Text style={styles.weatherLoc}>📍 {weather.location}</Text>
-          </View>
+    <Surface style={styles.weatherSurface} elevation={2}>
+      <View style={styles.weatherRow}>
+        <Text style={styles.weatherEmoji}>{emoji}</Text>
+        <View style={styles.weatherInfo}>
+          <Text variant="headlineSmall" style={styles.weatherTemp}>
+            {weather.temperature}°C
+          </Text>
+          <Text variant="bodyMedium" style={{ color: C.sky }}>
+            {weather.condition}
+          </Text>
+          <Text variant="labelSmall" style={{ color: C.text3 }}>
+            📍 {weather.location}
+          </Text>
         </View>
         <View style={styles.weatherStats}>
-          <View style={styles.statChip}>
-            <Text style={styles.statIcon}>💧</Text>
-            <Text style={styles.statVal}>{weather.humidity}%</Text>
+          <View style={styles.statRow}>
+            <MaterialCommunityIcons name="water-percent" size={13} color={C.sky} />
+            <Text variant="labelMedium" style={{ color: C.text2 }}>{weather.humidity}%</Text>
           </View>
-          <View style={styles.statChip}>
-            <Text style={styles.statIcon}>💨</Text>
-            <Text style={styles.statVal}>{weather.wind_speed} km/h</Text>
+          <View style={styles.statRow}>
+            <MaterialCommunityIcons name="weather-windy" size={13} color={C.sky} />
+            <Text variant="labelMedium" style={{ color: C.text2 }}>{weather.wind_speed} km/h</Text>
           </View>
-          <View style={styles.statChip}>
-            <Text style={styles.statIcon}>🌧</Text>
-            <Text style={styles.statVal}>{weather.precipitation ?? 0} mm</Text>
+          <View style={styles.statRow}>
+            <MaterialCommunityIcons name="weather-rainy" size={13} color={C.sky} />
+            <Text variant="labelMedium" style={{ color: C.text2 }}>{weather.precipitation ?? 0} mm</Text>
           </View>
         </View>
       </View>
       {rainAlert && (
-        <View style={styles.rainAlert}>
-          <Ionicons name="warning-outline" size={14} color="#f97316" />
-          <Text style={styles.rainAlertText}>
+        <Surface style={styles.rainAlert} elevation={0}>
+          <MaterialCommunityIcons name="alert" size={14} color="#f97316" />
+          <Text variant="labelSmall" style={{ color: '#fed7aa', flex: 1 }}>
             Heavy rain may raise prices due to supply disruption
           </Text>
-        </View>
+        </Surface>
       )}
-    </LinearGradient>
+    </Surface>
   );
 }
 
-function SummaryBanner({ total, rising, falling }: { total: number; rising: number; falling: number }) {
+function StatChips({ total, rising, falling }: { total: number; rising: number; falling: number }) {
+  const items = [
+    { label: `${total} Tracked`,           icon: 'basket-outline',        color: C.sky      },
+    { label: `${rising} Rising`,            icon: 'trending-up',           color: C.red      },
+    { label: `${falling} Falling`,          icon: 'trending-down',         color: C.green    },
+    { label: `${total - rising - falling} Stable`, icon: 'minus',         color: C.amber    },
+  ];
   return (
-    <View style={styles.summaryRow}>
-      {[
-        { label: 'Tracked', val: total, color: C.sky },
-        { label: 'Rising ↑', val: rising, color: C.red },
-        { label: 'Falling ↓', val: falling, color: C.green },
-        { label: 'Stable →', val: total - rising - falling, color: C.amber },
-      ].map(item => (
-        <View key={item.label} style={styles.summaryChip}>
-          <Text style={[styles.summaryNum, { color: item.color }]}>{item.val}</Text>
-          <Text style={styles.summaryLabel}>{item.label}</Text>
-        </View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipContent}>
+      {items.map(item => (
+        <Chip
+          key={item.label}
+          icon={() => <MaterialCommunityIcons name={item.icon as any} size={15} color={item.color} />}
+          style={[styles.statChip, { borderColor: item.color + '40' }]}
+          textStyle={{ color: item.color, fontSize: 12, fontWeight: '700' }}
+          mode="outlined"
+          compact
+        >
+          {item.label}
+        </Chip>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
 export default function HomeScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { dashboard, isLoading, fetchDashboard } = usePriceStore();
-  const [weather, setWeather] = useState<WeatherResponse | null>(null);
+  const [weather, setWeather]   = useState<WeatherResponse | null>(null);
 
   const refresh = () => {
     fetchDashboard();
     api.getWeather().then(setWeather).catch(() => {});
   };
-
   useEffect(() => { refresh(); }, []);
 
-  const rising = dashboard?.all_predictions.filter(p => p.trend === 'up').length ?? 0;
+  const rising  = dashboard?.all_predictions.filter(p => p.trend === 'up').length   ?? 0;
   const falling = dashboard?.all_predictions.filter(p => p.trend === 'down').length ?? 0;
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={C.indigo} />}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Hero Header */}
-      <LinearGradient colors={['#0a1628', C.bg]} style={styles.hero}>
-        <View style={styles.heroTop}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Top App Bar */}
+      <Surface style={styles.appbar} elevation={0}>
+        <View style={styles.appbarContent}>
           <View>
-            <Text style={styles.heroTitle}>VegPrice AI</Text>
-            <Text style={styles.heroSub}>Chennai Market Intelligence</Text>
+            <Text variant="headlineMedium" style={styles.appTitle}>VegPrice AI</Text>
+            <Text variant="labelMedium" style={{ color: C.text3 }}>Chennai Market Intelligence</Text>
           </View>
-          <TouchableOpacity
-            style={styles.aiBtn}
+          <IconButton
+            icon="cog-outline"
+            iconColor={C.primary}
+            size={24}
+            style={styles.settingsBtn}
             onPress={() => navigation.navigate('Admin')}
-          >
-            <Ionicons name="settings-outline" size={20} color={C.indigo} />
-          </TouchableOpacity>
+          />
         </View>
         {dashboard && (
-          <Text style={styles.heroMeta}>
+          <Text variant="labelSmall" style={styles.metaText}>
             Updated {dashboard.last_updated} · {dashboard.markets_tracked} markets
           </Text>
         )}
-      </LinearGradient>
+      </Surface>
 
-      {/* Weather */}
-      {weather ? (
-        <WeatherBanner weather={weather} />
-      ) : (
-        <View style={styles.weatherSkeleton}>
-          <ActivityIndicator size="small" color={C.indigo} />
-          <Text style={styles.skeletonText}>Loading Chennai weather...</Text>
-        </View>
-      )}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refresh} colors={[C.primary]} tintColor={C.primary} />
+        }
+      >
+        {/* Weather */}
+        {weather ? (
+          <WeatherCard weather={weather} />
+        ) : (
+          <Surface style={styles.weatherSkeleton} elevation={1}>
+            <ActivityIndicator size="small" color={C.primary} />
+            <Text variant="bodyMedium" style={{ color: C.text3, marginLeft: 10 }}>Loading Chennai weather...</Text>
+          </Surface>
+        )}
 
-      {/* Summary chips */}
-      {dashboard && (
-        <SummaryBanner
-          total={dashboard.total_vegetables}
-          rising={rising}
-          falling={falling}
-        />
-      )}
+        {/* Stat chips */}
+        {dashboard && (
+          <StatChips total={dashboard.total_vegetables} rising={rising} falling={falling} />
+        )}
 
-      {isLoading && !dashboard && (
-        <ActivityIndicator size="large" color={C.indigo} style={{ marginTop: 60 }} />
-      )}
-
-      {dashboard && (
-        <>
-          {/* Top Rising */}
-          {dashboard.top_rising.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionDot, { backgroundColor: C.red }]} />
-                <Text style={styles.sectionTitle}>Rising Tomorrow</Text>
-              </View>
-              {dashboard.top_rising.map(item => (
-                <TouchableOpacity
-                  key={item.vegetable}
-                  onPress={() => navigation.navigate('Forecast', { vegetable: item.vegetable })}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.trendCard, { borderColor: '#f43f5e30' }]}>
-                    <Text style={styles.trendVeg}>
-                      {item.vegetable.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                    </Text>
-                    <View style={styles.trendRight}>
-                      <Text style={[styles.trendPct, { color: C.red }]}>+{item.change_pct}%</Text>
-                      <Text style={[styles.trendPrice, { color: C.red }]}>₹{item.predicted_price.toFixed(0)}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Top Falling */}
-          {dashboard.top_falling.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionDot, { backgroundColor: C.green }]} />
-                <Text style={styles.sectionTitle}>Falling Tomorrow</Text>
-              </View>
-              {dashboard.top_falling.map(item => (
-                <TouchableOpacity
-                  key={item.vegetable}
-                  onPress={() => navigation.navigate('Forecast', { vegetable: item.vegetable })}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.trendCard, { borderColor: '#10b98130' }]}>
-                    <Text style={styles.trendVeg}>
-                      {item.vegetable.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                    </Text>
-                    <View style={styles.trendRight}>
-                      <Text style={[styles.trendPct, { color: C.green }]}>{item.change_pct}%</Text>
-                      <Text style={[styles.trendPrice, { color: C.green }]}>₹{item.predicted_price.toFixed(0)}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* All Vegetables */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={[styles.sectionDot, { backgroundColor: C.indigo }]} />
-              <Text style={styles.sectionTitle}>All Vegetables</Text>
-            </View>
-            {dashboard.all_predictions.map(pred => (
-              <TouchableOpacity
-                key={pred.vegetable}
-                onPress={() => navigation.navigate('Forecast', { vegetable: pred.vegetable })}
-                activeOpacity={0.7}
-              >
-                <PriceCard prediction={pred} compact />
-              </TouchableOpacity>
-            ))}
+        {isLoading && !dashboard && (
+          <View style={styles.loadCenter}>
+            <ActivityIndicator size="large" color={C.primary} />
           </View>
-        </>
-      )}
-      <View style={{ height: 30 }} />
-    </ScrollView>
+        )}
+
+        {dashboard && (
+          <>
+            {/* Rising section */}
+            {dashboard.top_rising.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <MaterialCommunityIcons name="trending-up" size={16} color={C.red} />
+                  <Text variant="titleSmall" style={[styles.sectionTitle, { color: C.red }]}>Rising Tomorrow</Text>
+                </View>
+                {dashboard.top_rising.map(item => {
+                  const name = item.vegetable.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                  return (
+                    <Card
+                      key={item.vegetable}
+                      style={styles.trendCard}
+                      onPress={() => navigation.navigate('Forecast', { vegetable: item.vegetable })}
+                    >
+                      <Card.Content style={styles.trendCardContent}>
+                        <View style={[styles.trendDot, { backgroundColor: C.red }]} />
+                        <Text variant="bodyLarge" style={styles.trendName}>{name}</Text>
+                        <View style={{ flex: 1 }} />
+                        <View style={styles.trendRight}>
+                          <Text variant="titleMedium" style={{ color: C.red, fontWeight: '800' }}>
+                            +{item.change_pct}%
+                          </Text>
+                          <Text variant="labelMedium" style={{ color: C.text3 }}>
+                            ₹{item.predicted_price.toFixed(0)}/kg
+                          </Text>
+                        </View>
+                      </Card.Content>
+                    </Card>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Falling section */}
+            {dashboard.top_falling.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <MaterialCommunityIcons name="trending-down" size={16} color={C.green} />
+                  <Text variant="titleSmall" style={[styles.sectionTitle, { color: C.green }]}>Falling Tomorrow</Text>
+                </View>
+                {dashboard.top_falling.map(item => {
+                  const name = item.vegetable.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                  return (
+                    <Card
+                      key={item.vegetable}
+                      style={styles.trendCard}
+                      onPress={() => navigation.navigate('Forecast', { vegetable: item.vegetable })}
+                    >
+                      <Card.Content style={styles.trendCardContent}>
+                        <View style={[styles.trendDot, { backgroundColor: C.green }]} />
+                        <Text variant="bodyLarge" style={styles.trendName}>{name}</Text>
+                        <View style={{ flex: 1 }} />
+                        <View style={styles.trendRight}>
+                          <Text variant="titleMedium" style={{ color: C.green, fontWeight: '800' }}>
+                            {item.change_pct}%
+                          </Text>
+                          <Text variant="labelMedium" style={{ color: C.text3 }}>
+                            ₹{item.predicted_price.toFixed(0)}/kg
+                          </Text>
+                        </View>
+                      </Card.Content>
+                    </Card>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* All vegetables */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="basket" size={16} color={C.primary} />
+                <Text variant="titleSmall" style={[styles.sectionTitle, { color: C.primary }]}>All Vegetables</Text>
+              </View>
+              <Surface style={styles.allVegSurface} elevation={1}>
+                {dashboard.all_predictions.map((pred, idx) => {
+                  const t    = TREND[pred.trend] || TREND.stable;
+                  const name = pred.vegetable.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                  const pct  = pred.current_price
+                    ? (((pred.predicted_price - pred.current_price) / pred.current_price) * 100).toFixed(1)
+                    : null;
+                  return (
+                    <View key={pred.vegetable}>
+                      <View
+                        style={styles.vegRow}
+                      >
+                        <View style={[styles.vegDot, { backgroundColor: t.color }]} />
+                        <Text
+                          variant="bodyMedium"
+                          style={styles.vegName}
+                          onPress={() => navigation.navigate('Forecast', { vegetable: pred.vegetable })}
+                        >
+                          {name}
+                        </Text>
+                        <View style={{ flex: 1 }} />
+                        <Text variant="labelMedium" style={{ color: C.text3, marginRight: 8 }}>
+                          {t.emoji} {pred.trend}
+                        </Text>
+                        <Text variant="titleSmall" style={{ color: t.color, fontWeight: '700', minWidth: 55, textAlign: 'right' }}>
+                          ₹{pred.predicted_price.toFixed(0)}
+                        </Text>
+                        {pct && (
+                          <Text variant="labelSmall" style={{ color: t.color, minWidth: 46, textAlign: 'right' }}>
+                            {Number(pct) > 0 ? '+' : ''}{pct}%
+                          </Text>
+                        )}
+                      </View>
+                      {idx < dashboard.all_predictions.length - 1 && (
+                        <Divider style={{ backgroundColor: C.border, marginLeft: 32 }} />
+                      )}
+                    </View>
+                  );
+                })}
+              </Surface>
+            </View>
+          </>
+        )}
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  hero: { paddingTop: 56, paddingBottom: 20, paddingHorizontal: 20 },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  heroTitle: { fontSize: 28, fontWeight: '800', color: C.text, letterSpacing: -0.5 },
-  heroSub: { fontSize: 13, color: C.text2, marginTop: 2 },
-  heroMeta: { fontSize: 11, color: C.text3, marginTop: 10 },
-  aiBtn: {
-    backgroundColor: '#6366f115', borderRadius: 12, padding: 10,
-    borderWidth: 1, borderColor: '#6366f130',
-  },
-  weatherCard: {
-    marginHorizontal: 16, marginBottom: 12, borderRadius: 20, padding: 16,
-    borderWidth: 1, borderColor: C.border,
-  },
-  weatherTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  weatherMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  weatherEmoji: { fontSize: 40 },
-  weatherTemp: { fontSize: 30, fontWeight: '800', color: C.text },
-  weatherCondition: { fontSize: 13, color: C.sky, marginTop: 2 },
-  weatherLoc: { fontSize: 11, color: C.text3, marginTop: 2 },
-  weatherStats: { gap: 6 },
-  statChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statIcon: { fontSize: 12 },
-  statVal: { color: C.text2, fontSize: 12, fontWeight: '500' },
-  rainAlert: {
+  container:     { flex: 1, backgroundColor: C.bg },
+  appbar:        { backgroundColor: C.surface, paddingHorizontal: 20, paddingBottom: 12, paddingTop: 8 },
+  appbarContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  appTitle:      { color: C.text, fontWeight: '800' },
+  metaText:      { color: C.text3, marginTop: 4 },
+  settingsBtn:   { backgroundColor: `${C.primary}18`, margin: 0 },
+
+  weatherSurface:  { margin: 16, borderRadius: 20, padding: 16, backgroundColor: C.surface2 },
+  weatherRow:      { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  weatherEmoji:    { fontSize: 44 },
+  weatherInfo:    { flex: 1, gap: 2 },
+  weatherTemp:    { color: C.text, fontWeight: '800' },
+  weatherStats:   { gap: 6, alignItems: 'flex-end' },
+  statRow:        { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  rainAlert:      {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     marginTop: 12, backgroundColor: '#f9731615', borderRadius: 8, padding: 8,
     borderLeftWidth: 3, borderLeftColor: '#f97316',
   },
-  rainAlertText: { color: '#fed7aa', fontSize: 12, flex: 1 },
   weatherSkeleton: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 16, marginBottom: 12, backgroundColor: C.card,
-    borderRadius: 20, padding: 20, borderWidth: 1, borderColor: C.border,
+    flexDirection: 'row', alignItems: 'center',
+    margin: 16, borderRadius: 20, padding: 20, backgroundColor: C.surface,
   },
-  skeletonText: { color: C.text3, fontSize: 13 },
-  summaryRow: {
-    flexDirection: 'row', marginHorizontal: 16, marginBottom: 16, gap: 8,
-  },
-  summaryChip: {
-    flex: 1, backgroundColor: C.card, borderRadius: 14, padding: 12,
-    alignItems: 'center', borderWidth: 1, borderColor: C.border,
-  },
-  summaryNum: { fontSize: 22, fontWeight: '800' },
-  summaryLabel: { color: C.text3, fontSize: 10, marginTop: 2, textAlign: 'center' },
-  section: { marginBottom: 8 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, marginBottom: 10 },
-  sectionDot: { width: 6, height: 6, borderRadius: 3 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: 0.2 },
-  trendCard: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: C.card, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16,
-    marginHorizontal: 16, marginBottom: 6, borderWidth: 1,
-  },
-  trendVeg: { color: C.text, fontSize: 14, fontWeight: '600', textTransform: 'capitalize' },
-  trendRight: { alignItems: 'flex-end' },
-  trendPct: { fontSize: 15, fontWeight: '700' },
-  trendPrice: { fontSize: 12, marginTop: 1 },
+
+  chipScroll:  { marginBottom: 8 },
+  chipContent: { paddingHorizontal: 16, gap: 8 },
+  statChip:    { backgroundColor: C.surface2 },
+
+  loadCenter: { alignItems: 'center', marginTop: 60 },
+
+  section:       { marginBottom: 8 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, marginBottom: 8, marginTop: 8 },
+  sectionTitle:  { fontWeight: '700', letterSpacing: 0.3 },
+
+  trendCard:        { marginHorizontal: 16, marginBottom: 6, backgroundColor: C.surface, borderRadius: 16 },
+  trendCardContent: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
+  trendDot:         { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+  trendName:        { color: C.text, fontWeight: '600', textTransform: 'capitalize' },
+  trendRight:       { alignItems: 'flex-end', gap: 2 },
+
+  allVegSurface: { marginHorizontal: 16, borderRadius: 20, overflow: 'hidden', backgroundColor: C.surface },
+  vegRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 13, paddingHorizontal: 16 },
+  vegDot:        { width: 7, height: 7, borderRadius: 4 },
+  vegName:       { color: C.text, fontWeight: '600', textTransform: 'capitalize' },
 });

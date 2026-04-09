@@ -1,17 +1,19 @@
 import React, { useState, useRef } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions,
-} from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  Surface, Text, FAB, IconButton, ActivityIndicator,
+  Button,
+} from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { C } from '../theme';
 
 const { width: W, height: H } = Dimensions.get('window');
-const BOX = W * 0.7;
+const BOX = W * 0.68;
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
 
@@ -20,25 +22,25 @@ export default function ScanScreen({ navigation }: any) {
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [errorMsg, setErrorMsg]   = useState('');
   const cameraRef = useRef<CameraView>(null);
+  const insets    = useSafeAreaInsets();
 
-  const processImage = async (imageUri: string) => {
+  const processImage = async (uri: string) => {
     setScanState('scanning');
     setErrorMsg('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const result = await api.scanImage(imageUri);
+      const result = await api.scanImage(uri);
       setScanState('success');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setTimeout(() => {
         setScanState('idle');
         navigation.navigate('Result', { scanResult: result });
-      }, 300);
+      }, 400);
     } catch (err: any) {
       setScanState('error');
-      const msg = err?.response?.data?.error || err.message || 'Unknown error';
-      setErrorMsg(msg);
+      setErrorMsg(err?.response?.data?.error || err.message || 'Unknown error');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setTimeout(() => setScanState('idle'), 3000);
+      setTimeout(() => setScanState('idle'), 3500);
     }
   };
 
@@ -54,46 +56,57 @@ export default function ScanScreen({ navigation }: any) {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.6,
     });
-    if (!result.canceled && result.assets[0]) {
-      await processImage(result.assets[0].uri);
-    }
+    if (!result.canceled && result.assets[0]) await processImage(result.assets[0].uri);
   };
 
+  // Permission screen
   if (!permission) return <View style={styles.container} />;
 
   if (!permission.granted) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <Ionicons name="camera-outline" size={64} color={C.text3} />
-        <Text style={styles.permTitle}>Camera Access Needed</Text>
-        <Text style={styles.permSub}>To scan vegetables and get instant price predictions</Text>
-        <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
-          <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.permBtnGrad}>
-            <Ionicons name="camera" size={18} color="#fff" />
-            <Text style={styles.permBtnText}>Allow Camera</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+      <View style={[styles.container, styles.permCenter]}>
+        <Surface style={styles.permCard} elevation={3}>
+          <MaterialCommunityIcons name="camera-off" size={64} color={C.text3} style={{ alignSelf: 'center', marginBottom: 16 }} />
+          <Text variant="headlineSmall" style={styles.permTitle}>Camera Access Needed</Text>
+          <Text variant="bodyMedium" style={styles.permSub}>
+            Point your camera at any vegetable for instant AI price prediction
+          </Text>
+          <Button
+            mode="contained"
+            onPress={requestPermission}
+            icon="camera"
+            style={styles.permBtn}
+            contentStyle={{ paddingVertical: 6 }}
+          >
+            Allow Camera
+          </Button>
+        </Surface>
       </View>
     );
   }
 
   const scanning = scanState === 'scanning';
   const hasError = scanState === 'error';
+  const isOk     = scanState === 'success';
+
+  const bracketColor = hasError ? C.red : isOk ? C.green : scanning ? C.amber : C.primary;
 
   return (
     <View style={styles.container}>
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
 
-      {/* Dark vignette overlay */}
+      {/* Vignette */}
       <View style={styles.vignette} pointerEvents="none" />
 
-      {/* Top label */}
-      <View style={styles.topBar}>
-        <Text style={styles.topTitle}>Scan Vegetable</Text>
-        <Text style={styles.topSub}>Point at any vegetable for instant AI price prediction</Text>
+      {/* Top bar */}
+      <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+        <Text variant="headlineSmall" style={styles.topTitle}>Scan Vegetable</Text>
+        <Text variant="bodySmall" style={styles.topSub}>
+          Point camera at any vegetable for instant AI price
+        </Text>
       </View>
 
-      {/* Scan box */}
+      {/* Scan frame */}
       <View style={styles.scanArea} pointerEvents="none">
         {/* Corner brackets */}
         {[
@@ -102,157 +115,138 @@ export default function ScanScreen({ navigation }: any) {
           { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3 },
           { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 },
         ].map((s, i) => (
-          <View key={i} style={[styles.corner, s, {
-            borderColor: hasError ? C.red : scanning ? C.amber : C.indigo,
-          }]} />
+          <View key={i} style={[styles.corner, s, { borderColor: bracketColor }]} />
         ))}
 
-        {/* State overlay inside box */}
+        {/* State overlay */}
         {scanning && (
           <View style={styles.stateOverlay}>
             <ActivityIndicator size="large" color={C.amber} />
-            <Text style={styles.stateText}>AI Identifying...</Text>
+            <Text variant="labelLarge" style={[styles.stateText, { color: C.amber }]}>AI Identifying…</Text>
           </View>
         )}
         {hasError && (
           <View style={styles.stateOverlay}>
-            <Ionicons name="close-circle" size={40} color={C.red} />
-            <Text style={[styles.stateText, { color: C.red }]}>Scan Failed</Text>
+            <MaterialCommunityIcons name="close-circle" size={48} color={C.red} />
+            <Text variant="labelLarge" style={[styles.stateText, { color: C.red }]}>Scan Failed</Text>
           </View>
         )}
-        {scanState === 'success' && (
+        {isOk && (
           <View style={styles.stateOverlay}>
-            <Ionicons name="checkmark-circle" size={40} color={C.green} />
-            <Text style={[styles.stateText, { color: C.green }]}>Detected!</Text>
+            <MaterialCommunityIcons name="check-circle" size={48} color={C.green} />
+            <Text variant="labelLarge" style={[styles.stateText, { color: C.green }]}>Detected!</Text>
           </View>
         )}
       </View>
 
-      {/* Error message */}
+      {/* Error banner */}
       {hasError && errorMsg ? (
-        <View style={styles.errorBanner}>
-          <Ionicons name="warning-outline" size={14} color={C.red} />
-          <Text style={styles.errorText} numberOfLines={2}>{errorMsg}</Text>
-        </View>
+        <Surface style={styles.errorBanner} elevation={3}>
+          <MaterialCommunityIcons name="alert" size={16} color={C.red} />
+          <Text variant="bodySmall" style={{ color: C.red, flex: 1 }} numberOfLines={2}>
+            {errorMsg}
+          </Text>
+        </Surface>
       ) : null}
 
       {/* Bottom controls */}
-      <LinearGradient
-        colors={['transparent', '#000000cc']}
-        style={styles.bottomGrad}
-      >
-        <View style={styles.controls}>
-          {/* Gallery */}
-          <TouchableOpacity style={styles.sideBtn} onPress={pickFromGallery} disabled={scanning}>
-            <Ionicons name="images-outline" size={22} color={scanning ? C.text3 : C.text} />
-            <Text style={[styles.sideBtnText, scanning && { color: C.text3 }]}>Gallery</Text>
-          </TouchableOpacity>
-
-          {/* Capture */}
-          <TouchableOpacity
-            style={[styles.captureBtn, scanning && styles.captureBtnDisabled]}
-            onPress={takePicture}
+      <View style={[styles.bottomControls, { paddingBottom: insets.bottom + 24 }]}>
+        {/* Gallery */}
+        <View style={styles.sideAction}>
+          <IconButton
+            icon="image-multiple"
+            iconColor={scanning ? C.text3 : C.text}
+            size={28}
+            style={styles.sideIconBtn}
+            onPress={pickFromGallery}
             disabled={scanning}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={scanning ? [C.text3, C.text3] : ['#6366f1', '#4f46e5']}
-              style={styles.captureBtnGrad}
-            >
-              {scanning
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Ionicons name="camera" size={28} color="#fff" />}
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* AI hint */}
-          <View style={styles.sideBtn}>
-            <Ionicons name="sparkles-outline" size={22} color={C.indigo} />
-            <Text style={[styles.sideBtnText, { color: C.indigo }]}>AI Scan</Text>
-          </View>
+          />
+          <Text variant="labelSmall" style={{ color: scanning ? C.text3 : C.text2, marginTop: 4 }}>Gallery</Text>
         </View>
 
-        <Text style={styles.bottomHint}>
-          Powered by Llama 3.2 Vision · Free model
-        </Text>
-      </LinearGradient>
+        {/* Main capture FAB */}
+        <FAB
+          icon={scanning ? '' : 'camera'}
+          onPress={takePicture}
+          disabled={scanning}
+          loading={scanning}
+          size="large"
+          style={[styles.captureFab, { backgroundColor: scanning ? C.surface3 : C.primary }]}
+          color="#fff"
+        />
+
+        {/* AI badge */}
+        <View style={styles.sideAction}>
+          <IconButton
+            icon="brain"
+            iconColor={C.primary}
+            size={28}
+            style={[styles.sideIconBtn, { backgroundColor: `${C.primary}18` }]}
+          />
+          <Text variant="labelSmall" style={{ color: C.primary, marginTop: 4 }}>AI Scan</Text>
+        </View>
+      </View>
+
+      {/* Hint */}
+      <Text variant="labelSmall" style={[styles.hint, { bottom: insets.bottom + 4 }]}>
+        Powered by Llama 3.2 Vision · Free model
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  center: { justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
+  container:   { flex: 1, backgroundColor: '#000' },
+  permCenter:  { justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg, padding: 24 },
+  permCard:    { borderRadius: 28, padding: 28, backgroundColor: C.surface, width: '100%' },
+  permTitle:   { color: C.text, fontWeight: '800', textAlign: 'center', marginBottom: 10 },
+  permSub:     { color: C.text2, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  permBtn:     { borderRadius: 14 },
 
-  // Permission
-  permTitle: { color: C.text, fontSize: 22, fontWeight: '800', marginTop: 16 },
-  permSub: { color: C.text2, fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  permBtn: { borderRadius: 14, overflow: 'hidden', marginTop: 8 },
-  permBtnGrad: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 14, paddingHorizontal: 28 },
-  permBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  vignette: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
 
-  // Overlay
-  vignette: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
+  topBar:  { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', paddingHorizontal: 32 },
+  topTitle: { color: '#fff', fontWeight: '800', textShadowColor: '#000', textShadowRadius: 8 },
+  topSub:   { color: 'rgba(255,255,255,0.65)', marginTop: 4, textAlign: 'center' },
 
-  // Top bar
-  topBar: {
-    position: 'absolute', top: 60, left: 0, right: 0,
-    alignItems: 'center', paddingHorizontal: 32,
-  },
-  topTitle: { color: '#fff', fontSize: 20, fontWeight: '800', textShadowColor: '#000', textShadowRadius: 4 },
-  topSub: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 6, textAlign: 'center' },
-
-  // Scan box
   scanArea: {
     position: 'absolute',
-    top: H / 2 - BOX / 2,
-    left: W / 2 - BOX / 2,
-    width: BOX,
+    top:    H / 2 - BOX / 2,
+    left:   W / 2 - BOX / 2,
+    width:  BOX,
     height: BOX,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems:     'center',
   },
   corner: {
     position: 'absolute',
-    width: 28, height: 28,
-    borderColor: C.indigo,
+    width: 30, height: 30,
     borderRadius: 4,
   },
   stateOverlay: { alignItems: 'center', gap: 8 },
-  stateText: { color: '#fff', fontSize: 14, fontWeight: '700', textShadowColor: '#000', textShadowRadius: 4 },
+  stateText:    { fontWeight: '800', textShadowColor: '#000', textShadowRadius: 6 },
 
-  // Error
   errorBanner: {
     position: 'absolute',
     bottom: 180, left: 24, right: 24,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#f43f5e20', borderRadius: 12, padding: 12,
-    borderWidth: 1, borderColor: '#f43f5e50',
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: `${C.red}20`, borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: `${C.red}40`,
   },
-  errorText: { color: C.red, fontSize: 12, flex: 1 },
 
-  // Bottom
-  bottomGrad: {
+  bottomControls: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingTop: 40, paddingBottom: 40,
-  },
-  controls: {
     flexDirection: 'row', justifyContent: 'space-around',
     alignItems: 'center', paddingHorizontal: 24,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingTop: 20,
   },
-  sideBtn: { alignItems: 'center', gap: 4, width: 70 },
-  sideBtnText: { color: C.text, fontSize: 11, fontWeight: '600' },
-  captureBtn: { borderRadius: 40 },
-  captureBtnDisabled: { opacity: 0.5 },
-  captureBtnGrad: {
-    width: 72, height: 72, borderRadius: 36,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  bottomHint: {
-    color: 'rgba(255,255,255,0.4)', fontSize: 11,
-    textAlign: 'center', marginTop: 16,
+  sideAction:  { alignItems: 'center', width: 72 },
+  sideIconBtn: { margin: 0 },
+  captureFab:  { width: 72, height: 72, borderRadius: 36 },
+
+  hint: {
+    position: 'absolute', left: 0, right: 0,
+    textAlign: 'center', color: 'rgba(255,255,255,0.35)',
   },
 });
