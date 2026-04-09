@@ -26,9 +26,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
       },
+      "package": "com.vegprice.chennai",
       "permissions": [
         "CAMERA",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED"
       ]
     },
     "plugins": [
@@ -39,7 +41,46 @@
         }
       ],
       "expo-notifications",
-      "expo-router"
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "VegPrice",
+              "label": "Veg Price",
+              "description": "Tomorrow's top vegetable price in Chennai",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "none"
+            },
+            {
+              "name": "MarketSummary",
+              "label": "Market Summary",
+              "description": "6 vegetables at a glance with trend",
+              "minWidth": "270dp",
+              "minHeight": "130dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "horizontal"
+            },
+            {
+              "name": "Dashboard",
+              "label": "VegPrice Dashboard",
+              "description": "Full price dashboard — rising and falling vegetables",
+              "minWidth": "270dp",
+              "minHeight": "260dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 4,
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "both"
+            }
+          ]
+        }
+      ]
     ]
   }
 }

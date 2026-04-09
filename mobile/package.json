@@ -1,7 +1,7 @@
 {
   "name": "vegprice",
   "version": "1.0.0",
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -41,6 +41,7 @@
     "react-native-vector-icons": "^10.1.0",
     "react-native-web": "^0.19.13",
     "victory-native": "^41.1.0",
+    "react-native-android-widget": "^0.14.0",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

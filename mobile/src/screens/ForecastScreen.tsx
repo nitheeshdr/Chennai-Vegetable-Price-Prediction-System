@@ -16,6 +16,7 @@ export default function ForecastScreen({ route }: any) {
   const label = vegetable.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
 
   const [forecast,   setForecast]   = useState<WeeklyForecastResponse | null>(null);
+  const [bestPred,   setBestPred]   = useState<AIPredictionResponse | null>(null);
   const [aiPred,     setAiPred]     = useState<AIPredictionResponse | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [aiLoading,  setAiLoading]  = useState(false);
@@ -23,24 +24,38 @@ export default function ForecastScreen({ route }: any) {
   const [aiError,    setAiError]    = useState('');
 
   useEffect(() => {
-    api.getWeeklyForecast(vegetable)
-      .then(setForecast).catch(() => setForecast(null))
-      .finally(() => setLoading(false));
+    setLoading(true);
+    setBestPred(null);
+    setForecast(null);
+    setAiPred(null);
+    // Fetch best single prediction (checks Supabase for AI price first)
+    // and weekly seasonal chart in parallel
+    Promise.all([
+      api.predict(vegetable).then(p => setBestPred(p as AIPredictionResponse)).catch(() => {}),
+      api.getWeeklyForecast(vegetable).then(setForecast).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, [vegetable]);
 
   const fetchAI = (val: string) => {
     setMode(val);
-    if (val === 'seasonal' || aiPred) return;
+    if (val === 'seasonal') return;
+    // If bestPred is already from AI (not seasonal model), use it directly
+    if (bestPred && bestPred.model_name && !bestPred.model_name.startsWith('seasonal')) {
+      setAiPred(bestPred);
+      return;
+    }
+    if (aiPred) return;
     setAiLoading(true);
     setAiError('');
     api.aiPredict(vegetable)
-      .then(d => setAiPred(d))
+      .then(d => { setAiPred(d); setBestPred(d); })
       .catch((e: any) => setAiError(e?.response?.data?.error || 'AI prediction failed — try again'))
       .finally(() => setAiLoading(false));
   };
 
-  const today = forecast?.forecast?.[0];
-  const t     = today ? TREND[today.trend] || TREND.stable : TREND.stable;
+  // Hero uses best available: AI from Supabase → else seasonal forecast day 1
+  const heroData = bestPred ?? forecast?.forecast?.[0];
+  const t        = heroData ? TREND[heroData.trend] || TREND.stable : TREND.stable;
 
   const chartData = forecast?.forecast?.length ? {
     labels:   forecast.forecast.map(f => f.prediction_date.slice(5)),
@@ -63,26 +78,26 @@ export default function ForecastScreen({ route }: any) {
         <Text variant="labelLarge" style={{ color: C.text3, marginTop: SP.xs, marginBottom: SP.xxl }}>
           7-Day Price Forecast
         </Text>
-        {today && (
+        {heroData && (
           <View style={s.heroGrid}>
             <View style={s.heroCol}>
               <Text variant="labelSmall" style={s.heroLabel}>TODAY</Text>
               <Text variant="headlineSmall" style={{ color: C.text2, fontWeight: '700' }}>
-                ₹{today.current_price?.toFixed(0) ?? '—'}
+                ₹{heroData.current_price?.toFixed(0) ?? '—'}
               </Text>
             </View>
             <Divider style={s.heroDividerV} />
             <View style={[s.heroCol, { flex: 1.2 }]}>
               <Text variant="labelSmall" style={s.heroLabel}>TOMORROW</Text>
               <Text variant="displaySmall" style={{ color: t.color, fontWeight: '900' }}>
-                ₹{today.predicted_price.toFixed(0)}
+                ₹{heroData.predicted_price.toFixed(0)}
               </Text>
             </View>
             <Divider style={s.heroDividerV} />
             <View style={s.heroCol}>
               <Text variant="labelSmall" style={s.heroLabel}>TREND</Text>
               <Text variant="titleLarge" style={{ color: t.color, fontWeight: '800' }}>
-                {t.emoji} {today.trend}
+                {t.emoji} {heroData.trend}
               </Text>
             </View>
           </View>
