@@ -70,6 +70,20 @@ export interface AIPredictionResponse extends PredictionResponse {
   weather_used: boolean;
 }
 
+export interface PriceHistoryRecord {
+  date: string;
+  market_name: string | null;
+  min_price: number | null;
+  max_price: number | null;
+  modal_price: number;
+}
+
+export interface PriceHistoryResponse {
+  vegetable: string;
+  history: PriceHistoryRecord[];
+  count: number;
+}
+
 // ── API functions ─────────────────────────────────────────────────────────────
 export const api = {
   async predict(vegetable: string, market?: string): Promise<PredictionResponse> {
@@ -154,6 +168,13 @@ export const api = {
     const params: Record<string, string> = { vegetable };
     if (market) params.market = market;
     const { data } = await apiClient.get('/ai-predict', { params });
+    return data;
+  },
+
+  async getPriceHistory(vegetable: string, days = 30): Promise<PriceHistoryResponse> {
+    const { data } = await apiClient.get('/price-history', {
+      params: { vegetable, days: String(days) },
+    });
     return data;
   },
 };

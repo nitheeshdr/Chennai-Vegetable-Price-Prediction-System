@@ -337,7 +337,7 @@ def _scan_image(image_b64: str) -> dict:
     confidence = float(scan.get("confidence", 0.5))
     top_k = scan.get("top_k", [{"vegetable": veg, "confidence": confidence}])
 
-    # Get price + prediction for detected vegetable
+    # Get price + prediction for detected vegetable (Supabase AI first, seasonal fallback)
     current_price = None
     prediction = None
     if veg != "unknown":
@@ -351,7 +351,34 @@ def _scan_image(image_b64: str) -> dict:
                 current_price = {**rows[0], "vegetable": veg, "unit": "Rs/kg"}
         except Exception:
             pass
-        prediction = _predict(veg, None, days=1)
+        # Check Supabase for saved AI prediction first (same as /predict endpoint)
+        prediction = None
+        try:
+            pred_rows = _rest("predictions", {
+                "vegetable_name": f"eq.{veg}",
+                "order": "created_at.desc",
+                "limit": "1",
+            })
+            if pred_rows:
+                row     = pred_rows[0]
+                current = _get_price(veg, None)
+                pp      = row["predicted_price"]
+                tr      = _trend(current, pp) if current else row.get("trend", "stable")
+                prediction = {
+                    "vegetable":        veg,
+                    "prediction_date":  row["prediction_date"],
+                    "current_price":    current,
+                    "predicted_price":  pp,
+                    "confidence_lower": row.get("confidence_lower") or round(pp * 0.92, 2),
+                    "confidence_upper": row.get("confidence_upper") or round(pp * 1.08, 2),
+                    "trend":            tr,
+                    "trend_emoji":      {"up": "↑", "down": "↓", "stable": "→"}.get(tr, "→"),
+                    "model_name":       row.get("model_used", "ai"),
+                }
+        except Exception:
+            pass
+        if prediction is None:
+            prediction = _predict(veg, None, days=1)
 
     return {
         "vegetable_detected": veg,
@@ -534,6 +561,7 @@ def _dispatch(path: str, qs: dict) -> tuple:
                 {"method": "GET", "path": "/get-current-price?vegetable=tomato",          "description": "Current market price"},
                 {"method": "GET", "path": "/get-current-price/market-comparison?vegetable=tomato", "description": "Price comparison across markets"},
                 {"method": "GET", "path": "/weekly-forecast?vegetable=tomato",            "description": "7-day price forecast"},
+                {"method": "GET", "path": "/price-history?vegetable=tomato&days=30",     "description": "Historical price records (last N days)"},
                 {"method": "GET", "path": "/dashboard",                                   "description": "Summary for all vegetables"},
             ],
         })
@@ -590,8 +618,60 @@ def _dispatch(path: str, qs: dict) -> tuple:
         veg_raw = q("vegetable", "")
         market = q("market")
         veg = veg_raw.lower().replace(" ", "_")
-        forecast = [p for i in range(1, 8) if (p := _predict(veg, market, days=i))]
+        forecast = []
+        for i in range(1, 8):
+            p = _predict(veg, market, days=i)
+            if i == 1:
+                # Use Supabase AI prediction for day 1 if available
+                try:
+                    rows = _rest("predictions", {
+                        "vegetable_name": f"eq.{veg}",
+                        "order": "created_at.desc",
+                        "limit": "1",
+                    })
+                    if rows:
+                        row     = rows[0]
+                        current = _get_price(veg, market)
+                        pp      = row["predicted_price"]
+                        tr      = _trend(current, pp) if current else row.get("trend", "stable")
+                        p = {
+                            "vegetable":        veg,
+                            "prediction_date":  row["prediction_date"],
+                            "current_price":    current,
+                            "predicted_price":  pp,
+                            "confidence_lower": row.get("confidence_lower") or round(pp * 0.92, 2),
+                            "confidence_upper": row.get("confidence_upper") or round(pp * 1.08, 2),
+                            "trend":            tr,
+                            "trend_emoji":      {"up": "↑", "down": "↓", "stable": "→"}.get(tr, "→"),
+                            "model_name":       row.get("model_used", "ai"),
+                        }
+                except Exception:
+                    pass
+            if p:
+                forecast.append(p)
         return _ok({"vegetable": veg, "market": market, "forecast": forecast})
+
+    if path == "/price-history":
+        veg_raw = q("vegetable", "")
+        days_str = q("days", "30")
+        if not veg_raw:
+            return _err("vegetable parameter required")
+        veg = veg_raw.lower().replace(" ", "_")
+        try:
+            limit = min(int(days_str), 90)
+        except ValueError:
+            limit = 30
+        try:
+            rows = _rest("price_records", {
+                "vegetable_name": f"eq.{veg}",
+                "order": "date.desc",
+                "limit": str(limit),
+                "select": "date,market_name,min_price,max_price,modal_price",
+            })
+        except Exception as e:
+            return _err(str(e), 500)
+        rows.reverse()  # chronological order
+        return _ok({"vegetable": veg, "history": rows, "count": len(rows)})
 
     if path == "/dashboard":
         # Batch-fetch latest AI predictions saved to Supabase

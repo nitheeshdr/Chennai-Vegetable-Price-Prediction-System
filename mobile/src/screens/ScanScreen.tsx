@@ -7,7 +7,8 @@ import { Surface, Text, FAB, IconButton, ActivityIndicator, Button } from 'react
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
-import { C, SP, SHAPE } from '../theme';
+import { useC } from '../context/ThemeContext';
+import { SP, SHAPE } from '../theme';
 
 const { width: W, height: H } = Dimensions.get('window');
 const BOX = W * 0.68;
@@ -15,6 +16,7 @@ const BOX = W * 0.68;
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
 
 export default function ScanScreen({ navigation }: any) {
+  const C = useC();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanState,  setScanState]  = useState<ScanState>('idle');
   const [errorMsg,   setErrorMsg]   = useState('');
@@ -50,27 +52,21 @@ export default function ScanScreen({ navigation }: any) {
     if (!res.canceled && res.assets[0]) await processImage(res.assets[0].uri);
   };
 
-  // ── Permission gate ────────────────────────────────────────────────────────
-  if (!permission) return <View style={s.container} />;
+  if (!permission) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
 
   if (!permission.granted) {
     return (
-      <View style={[s.container, s.permCenter, { paddingTop: insets.top }]}>
-        <Surface style={s.permCard} elevation={3}>
+      <View style={[s.permCenter, { paddingTop: insets.top, backgroundColor: C.bg }]}>
+        <Surface style={[s.permCard, { backgroundColor: C.surface }]} elevation={3}>
           <View style={[s.permIcon, { backgroundColor: `${C.primary}18` }]}>
             <MaterialCommunityIcons name="camera-off" size={48} color={C.primary} />
           </View>
-          <Text variant="headlineSmall" style={s.permTitle}>Camera Access Needed</Text>
-          <Text variant="bodyMedium" style={s.permSub}>
+          <Text variant="headlineSmall" style={[s.permTitle, { color: C.text }]}>Camera Access Needed</Text>
+          <Text variant="bodyMedium"    style={[s.permSub, { color: C.text2 }]}>
             Point your camera at any vegetable for instant AI price prediction
           </Text>
-          <Button
-            mode="contained"
-            onPress={requestPermission}
-            icon="camera"
-            style={s.permBtn}
-            contentStyle={{ paddingVertical: SP.sm }}
-          >
+          <Button mode="contained" onPress={requestPermission} icon="camera"
+            style={s.permBtn} contentStyle={{ paddingVertical: SP.sm }}>
             Allow Camera
           </Button>
         </Surface>
@@ -78,37 +74,32 @@ export default function ScanScreen({ navigation }: any) {
     );
   }
 
-  const scanning  = scanState === 'scanning';
-  const hasError  = scanState === 'error';
-  const isOk      = scanState === 'success';
+  const scanning   = scanState === 'scanning';
+  const hasError   = scanState === 'error';
+  const isOk       = scanState === 'success';
   const frameColor = hasError ? C.red : isOk ? C.green : scanning ? C.amber : C.primary;
 
   return (
     <View style={s.container}>
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
-
-      {/* Vignette */}
       <View style={s.vignette} pointerEvents="none" />
 
-      {/* Top label */}
       <View style={[s.topLabel, { paddingTop: insets.top + SP.lg }]}>
         <Text variant="headlineSmall" style={s.topTitle}>Scan Vegetable</Text>
-        <Text variant="bodySmall" style={s.topSub}>
+        <Text variant="bodySmall"     style={s.topSub}>
           Point at any vegetable for instant AI price prediction
         </Text>
       </View>
 
-      {/* Scan frame */}
       <View style={s.scanArea} pointerEvents="none">
         {[
-          { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3 },
-          { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3 },
-          { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3 },
-          { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 },
+          { top: 0,    left: 0,   borderTopWidth: 3,    borderLeftWidth: 3  },
+          { top: 0,    right: 0,  borderTopWidth: 3,    borderRightWidth: 3 },
+          { bottom: 0, left: 0,   borderBottomWidth: 3, borderLeftWidth: 3  },
+          { bottom: 0, right: 0,  borderBottomWidth: 3, borderRightWidth: 3 },
         ].map((style, i) => (
           <View key={i} style={[s.corner, style, { borderColor: frameColor }]} />
         ))}
-
         {scanning && (
           <View style={s.stateOverlay}>
             <ActivityIndicator size="large" color={C.amber} />
@@ -129,22 +120,18 @@ export default function ScanScreen({ navigation }: any) {
         )}
       </View>
 
-      {/* Error banner */}
       {hasError && !!errorMsg && (
-        <Surface style={s.errorBanner} elevation={3}>
+        <Surface style={[s.errorBanner, { backgroundColor: `${C.red}20`, borderColor: `${C.red}40` }]} elevation={3}>
           <MaterialCommunityIcons name="alert" size={16} color={C.red} />
-          <Text variant="bodySmall" style={{ color: C.red, flex: 1 }} numberOfLines={2}>
-            {errorMsg}
-          </Text>
+          <Text variant="bodySmall" style={{ color: C.red, flex: 1 }} numberOfLines={2}>{errorMsg}</Text>
         </Surface>
       )}
 
-      {/* Bottom controls */}
       <View style={[s.bottomBar, { paddingBottom: insets.bottom + SP.xxl }]}>
         <View style={s.sideSlot}>
           <IconButton
             icon="image-multiple-outline"
-            iconColor={scanning ? C.text3 : C.text}
+            iconColor={scanning ? C.text3 : '#fff'}
             size={26}
             containerColor={scanning ? 'transparent' : 'rgba(255,255,255,0.12)'}
             style={{ margin: 0 }}
@@ -162,7 +149,7 @@ export default function ScanScreen({ navigation }: any) {
           disabled={scanning}
           onPress={takePicture}
           size="large"
-          style={[s.captureFab, { backgroundColor: scanning ? C.surface3 : C.primary }]}
+          style={[s.captureFab, { backgroundColor: scanning ? 'rgba(255,255,255,0.15)' : C.primary }]}
           color="#fff"
         />
 
@@ -187,11 +174,11 @@ export default function ScanScreen({ navigation }: any) {
 
 const s = StyleSheet.create({
   container:  { flex: 1, backgroundColor: '#000' },
-  permCenter: { justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg, padding: SP.lg },
-  permCard:   { borderRadius: SHAPE.xl, padding: SP.xxl, backgroundColor: C.surface, width: '100%', gap: SP.lg, alignItems: 'center' },
+  permCenter: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SP.lg },
+  permCard:   { borderRadius: SHAPE.xl, padding: SP.xxl, width: '100%', gap: SP.lg, alignItems: 'center' },
   permIcon:   { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center' },
-  permTitle:  { color: C.text, fontWeight: '800', textAlign: 'center' },
-  permSub:    { color: C.text2, textAlign: 'center', lineHeight: 22 },
+  permTitle:  { fontWeight: '800', textAlign: 'center' },
+  permSub:    { textAlign: 'center', lineHeight: 22 },
   permBtn:    { borderRadius: SHAPE.lg, width: '100%' },
 
   vignette: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' },
@@ -202,8 +189,7 @@ const s = StyleSheet.create({
 
   scanArea: {
     position: 'absolute',
-    top:  H / 2 - BOX / 2,
-    left: W / 2 - BOX / 2,
+    top: H / 2 - BOX / 2, left: W / 2 - BOX / 2,
     width: BOX, height: BOX,
     justifyContent: 'center', alignItems: 'center',
   },
@@ -214,11 +200,10 @@ const s = StyleSheet.create({
   errorBanner: {
     position: 'absolute', bottom: 185, left: SP.xxl, right: SP.xxl,
     flexDirection: 'row', alignItems: 'center', gap: SP.md,
-    backgroundColor: `${C.red}20`, borderRadius: SHAPE.md, padding: SP.lg,
-    borderWidth: 1, borderColor: `${C.red}40`,
+    borderRadius: SHAPE.md, padding: SP.lg, borderWidth: 1,
   },
 
-  bottomBar:  {
+  bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center',
     paddingHorizontal: SP.xxl, paddingTop: SP.xxl,

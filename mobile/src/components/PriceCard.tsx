@@ -3,7 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import { Surface, Text, Chip, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PredictionResponse } from '../services/api';
-import { C, SP, SHAPE, TREND } from '../theme';
+import { useC, useTREND } from '../context/ThemeContext';
+import { SP, SHAPE } from '../theme';
 
 interface Props {
   prediction: PredictionResponse;
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export default function PriceCard({ prediction, compact }: Props) {
+  const C    = useC();
+  const TREND = useTREND();
   const t    = TREND[prediction.trend] || TREND.stable;
   const name = prediction.vegetable.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
   const changePct = prediction.current_price
@@ -21,7 +24,7 @@ export default function PriceCard({ prediction, compact }: Props) {
     return (
       <View style={s.compact}>
         <View style={[s.dot, { backgroundColor: t.color }]} />
-        <Text variant="bodyMedium" style={s.compactName}>{name}</Text>
+        <Text variant="bodyMedium" style={[s.compactName, { color: C.text }]}>{name}</Text>
         <View style={{ flex: 1 }} />
         <Text variant="labelMedium" style={{ color: C.text3, marginRight: SP.sm }}>
           {t.emoji} {prediction.trend}
@@ -39,7 +42,7 @@ export default function PriceCard({ prediction, compact }: Props) {
   }
 
   return (
-    <Surface style={[s.card, { borderColor: `${t.color}30` }]} elevation={1}>
+    <Surface style={[s.card, { borderColor: `${t.color}30`, backgroundColor: C.surface }]} elevation={1}>
       {/* Header */}
       <View style={s.header}>
         <View style={[s.iconWrap, { backgroundColor: `${t.color}18` }]}>
@@ -70,14 +73,14 @@ export default function PriceCard({ prediction, compact }: Props) {
       <View style={s.priceRow}>
         {prediction.current_price != null && (
           <View style={s.priceCol}>
-            <Text variant="labelSmall" style={s.priceLabel}>TODAY</Text>
+            <Text variant="labelSmall" style={[s.priceLabel, { color: C.text3 }]}>TODAY</Text>
             <Text variant="titleLarge" style={{ color: C.text2, fontWeight: '700' }}>
               ₹{prediction.current_price.toFixed(0)}
             </Text>
           </View>
         )}
-        <View style={[s.priceCol, prediction.current_price != null && s.priceMid]}>
-          <Text variant="labelSmall" style={s.priceLabel}>TOMORROW</Text>
+        <View style={[s.priceCol, prediction.current_price != null && { borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border }]}>
+          <Text variant="labelSmall" style={[s.priceLabel, { color: C.text3 }]}>TOMORROW</Text>
           <Text variant="headlineSmall" style={{ color: t.color, fontWeight: '900' }}>
             ₹{prediction.predicted_price.toFixed(0)}
           </Text>
@@ -88,7 +91,7 @@ export default function PriceCard({ prediction, compact }: Props) {
           )}
         </View>
         <View style={s.priceCol}>
-          <Text variant="labelSmall" style={s.priceLabel}>RANGE</Text>
+          <Text variant="labelSmall" style={[s.priceLabel, { color: C.text3 }]}>RANGE</Text>
           <Text variant="bodyMedium" style={{ color: C.text2 }}>₹{prediction.confidence_lower.toFixed(0)}</Text>
           <Text variant="labelSmall" style={{ color: C.text3 }}>–</Text>
           <Text variant="bodyMedium" style={{ color: C.text2 }}>₹{prediction.confidence_upper.toFixed(0)}</Text>
@@ -96,7 +99,7 @@ export default function PriceCard({ prediction, compact }: Props) {
       </View>
 
       {prediction.model_name && (
-        <Text variant="labelSmall" style={s.modelTag}>⚡ {prediction.model_name}</Text>
+        <Text variant="labelSmall" style={[s.modelTag, { color: C.text3 }]}>⚡ {prediction.model_name}</Text>
       )}
     </Surface>
   );
@@ -106,19 +109,18 @@ const s = StyleSheet.create({
   card: {
     borderRadius: SHAPE.xl, padding: SP.lg,
     marginHorizontal: SP.lg, marginBottom: SP.md,
-    borderWidth: 1, backgroundColor: C.surface,
+    borderWidth: 1,
   },
   header:   { flexDirection: 'row', alignItems: 'center', gap: SP.md },
   iconWrap: { width: 42, height: 42, borderRadius: SHAPE.md, justifyContent: 'center', alignItems: 'center' },
 
   priceRow: { flexDirection: 'row' },
   priceCol: { flex: 1, alignItems: 'center', gap: SP.xs, paddingVertical: SP.sm },
-  priceMid: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border },
-  priceLabel: { color: C.text3, letterSpacing: 1.2, textTransform: 'uppercase', fontSize: 9 },
+  priceLabel: { letterSpacing: 1.2, textTransform: 'uppercase', fontSize: 9 },
 
-  modelTag: { color: C.text3, textAlign: 'right', marginTop: SP.md },
+  modelTag: { textAlign: 'right', marginTop: SP.md },
 
   compact:     { flexDirection: 'row', alignItems: 'center', gap: SP.sm, paddingVertical: 13, paddingHorizontal: SP.lg },
   dot:         { width: 7, height: 7, borderRadius: 4, flexShrink: 0 },
-  compactName: { color: C.text, fontWeight: '600', textTransform: 'capitalize' },
+  compactName: { fontWeight: '600', textTransform: 'capitalize' },
 });

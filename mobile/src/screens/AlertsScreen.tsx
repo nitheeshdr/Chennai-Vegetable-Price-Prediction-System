@@ -8,7 +8,8 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
-import { C, SP, SHAPE } from '../theme';
+import { useC } from '../context/ThemeContext';
+import { SP, SHAPE } from '../theme';
 
 const VEGETABLES = [
   'tomato', 'onion', 'potato', 'brinjal', 'ladies_finger',
@@ -18,6 +19,7 @@ const VEGETABLES = [
 const USER_ID = 'demo-user-001';
 
 export default function AlertsScreen() {
+  const C      = useC();
   const insets = useSafeAreaInsets();
   const [alerts,      setAlerts]      = useState<any[]>([]);
   const [loading,     setLoading]     = useState(false);
@@ -48,9 +50,7 @@ export default function AlertsScreen() {
       setSnack(`Alert set: ${selectedVeg.replace(/_/g,' ')} ${direction} ₹${threshold}/kg`);
     } catch (e: any) {
       Alert.alert('Error', e.message);
-    } finally {
-      setCreating(false);
-    }
+    } finally { setCreating(false); }
   };
 
   const deleteAlert = (id: string, name: string) => {
@@ -61,116 +61,77 @@ export default function AlertsScreen() {
   };
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
-      {/* ── Top App Bar ── */}
-      <Surface style={s.topBar} elevation={0}>
-        <Text variant="headlineMedium" style={s.appTitle}>Price Alerts</Text>
-        <Text variant="labelMedium" style={{ color: C.text3, marginTop: SP.xs }}>
+    <View style={[s.root, { paddingTop: insets.top, backgroundColor: C.bg }]}>
+      <Surface style={[s.topBar, { backgroundColor: C.surface }]} elevation={0}>
+        <Text variant="headlineMedium" style={[s.appTitle, { color: C.text }]}>Price Alerts</Text>
+        <Text variant="labelMedium"    style={{ color: C.text3, marginTop: SP.xs }}>
           Get notified when prices change
         </Text>
       </Surface>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SP.huge }}>
 
-        {/* ── Create Alert ── */}
-        <Card style={s.card}>
+        <Card style={[s.card, { backgroundColor: C.surface }]}>
           <Card.Content>
             <View style={s.cardHead}>
               <MaterialCommunityIcons name="bell-plus" size={18} color={C.primary} />
-              <Text variant="titleMedium" style={s.cardTitle}>Create Alert</Text>
+              <Text variant="titleMedium" style={[s.cardTitle, { color: C.text }]}>Create Alert</Text>
             </View>
 
-            {/* Vegetable */}
-            <Text variant="labelMedium" style={s.fieldLabel}>Vegetable</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: SP.sm, paddingBottom: SP.sm }}
-            >
+            <Text variant="labelMedium" style={[s.fieldLabel, { color: C.text3 }]}>Vegetable</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: SP.sm, paddingBottom: SP.sm }}>
               {VEGETABLES.map(v => (
-                <Chip
-                  key={v}
-                  selected={selectedVeg === v}
-                  onPress={() => setSelectedVeg(v)}
-                  showSelectedCheck={false}
-                  compact
-                  style={[
-                    s.vegChip,
-                    { backgroundColor: selectedVeg === v ? `${C.primary}28` : C.surface2 },
-                  ]}
-                  textStyle={{ color: selectedVeg === v ? C.primary : C.text2, fontSize: 12, fontWeight: selectedVeg === v ? '700' : '400' }}
-                >
+                <Chip key={v} selected={selectedVeg === v} onPress={() => setSelectedVeg(v)}
+                  showSelectedCheck={false} compact
+                  style={[s.vegChip, { backgroundColor: selectedVeg === v ? `${C.primary}28` : C.surface2 }]}
+                  textStyle={{ color: selectedVeg === v ? C.primary : C.text2, fontSize: 12, fontWeight: selectedVeg === v ? '700' : '400' }}>
                   {v.replace(/_/g, ' ')}
                 </Chip>
               ))}
             </ScrollView>
 
-            {/* Direction */}
-            <Text variant="labelMedium" style={s.fieldLabel}>Alert when price is</Text>
-            <SegmentedButtons
-              value={direction}
-              onValueChange={v => setDirection(v as 'above' | 'below')}
+            <Text variant="labelMedium" style={[s.fieldLabel, { color: C.text3 }]}>Alert when price is</Text>
+            <SegmentedButtons value={direction} onValueChange={v => setDirection(v as 'above' | 'below')}
               style={{ marginBottom: SP.lg }}
               buttons={[
-                {
-                  value: 'above', label: 'Above ↑', icon: 'trending-up',
-                  style: { backgroundColor: direction === 'above' ? `${C.red}20` : C.surface2 },
-                },
-                {
-                  value: 'below', label: 'Below ↓', icon: 'trending-down',
-                  style: { backgroundColor: direction === 'below' ? `${C.green}20` : C.surface2 },
-                },
+                { value: 'above', label: 'Above ↑', icon: 'trending-up',
+                  style: { backgroundColor: direction === 'above' ? `${C.red}20` : C.surface2 } },
+                { value: 'below', label: 'Below ↓', icon: 'trending-down',
+                  style: { backgroundColor: direction === 'below' ? `${C.green}20` : C.surface2 } },
               ]}
             />
 
-            {/* Price */}
-            <TextInput
-              label="Threshold Price"
-              value={threshold}
-              onChangeText={setThreshold}
-              keyboardType="numeric"
-              mode="outlined"
+            <TextInput label="Threshold Price" value={threshold} onChangeText={setThreshold}
+              keyboardType="numeric" mode="outlined"
               left={<TextInput.Affix text="₹" textStyle={{ color: C.primary }} />}
               right={<TextInput.Affix text="/kg" textStyle={{ color: C.text3 }} />}
-              style={s.input}
-              outlineColor={C.border}
-              activeOutlineColor={C.primary}
+              style={[s.input, { backgroundColor: C.surface2 }]}
+              outlineColor={C.border} activeOutlineColor={C.primary}
               textColor={C.text}
-              theme={{ colors: { onSurfaceVariant: C.text3, surface: C.surface2 } }}
+              theme={{ colors: { onSurfaceVariant: C.text3 } }}
             />
 
-            <Button
-              mode="contained"
-              onPress={createAlert}
-              loading={creating}
-              disabled={creating}
-              icon="bell-plus"
-              style={s.createBtn}
-              contentStyle={{ paddingVertical: SP.sm }}
-            >
+            <Button mode="contained" onPress={createAlert} loading={creating} disabled={creating}
+              icon="bell-plus" style={s.createBtn} contentStyle={{ paddingVertical: SP.sm }}>
               Set Alert
             </Button>
           </Card.Content>
         </Card>
 
-        {/* ── Active Alerts ── */}
-        <Card style={s.card}>
+        <Card style={[s.card, { backgroundColor: C.surface }]}>
           <Card.Content>
             <View style={s.cardHead}>
               <MaterialCommunityIcons name="bell" size={18} color={C.amber} />
-              <Text variant="titleMedium" style={s.cardTitle}>Active Alerts</Text>
+              <Text variant="titleMedium" style={[s.cardTitle, { color: C.text }]}>Active Alerts</Text>
               {alerts.length > 0 && (
-                <View style={s.countBadge}>
+                <View style={[s.countBadge, { backgroundColor: `${C.primary}20` }]}>
                   <Text variant="labelSmall" style={{ color: C.primary, fontWeight: '800' }}>{alerts.length}</Text>
                 </View>
               )}
             </View>
 
-            {loading && (
-              <View style={{ alignItems: 'center', paddingVertical: SP.xxl }}>
-                <ActivityIndicator size="small" color={C.primary} />
-              </View>
-            )}
+            {loading && <View style={{ alignItems: 'center', paddingVertical: SP.xxl }}><ActivityIndicator size="small" color={C.primary} /></View>}
 
             {!loading && alerts.length === 0 && (
               <View style={s.emptyState}>
@@ -198,13 +159,9 @@ export default function AlertsScreen() {
                       </View>
                     )}
                     right={() => (
-                      <IconButton
-                        icon="trash-can-outline"
-                        iconColor={C.red}
-                        size={18}
+                      <IconButton icon="trash-can-outline" iconColor={C.red} size={18}
                         onPress={() => deleteAlert(alert.id, alert.vegetable_name)}
-                        style={{ margin: 0, alignSelf: 'center' }}
-                      />
+                        style={{ margin: 0, alignSelf: 'center' }} />
                     )}
                     style={{ paddingHorizontal: 0, paddingVertical: SP.xs }}
                     contentStyle={{ marginLeft: 0 }}
@@ -217,12 +174,8 @@ export default function AlertsScreen() {
         </Card>
       </ScrollView>
 
-      <Snackbar
-        visible={!!snack}
-        onDismiss={() => setSnack('')}
-        duration={3000}
-        style={{ backgroundColor: C.surface2, marginBottom: SP.sm }}
-      >
+      <Snackbar visible={!!snack} onDismiss={() => setSnack('')} duration={3000}
+        style={{ backgroundColor: C.surface2, marginBottom: SP.sm }}>
         {snack}
       </Snackbar>
     </View>
@@ -230,20 +183,17 @@ export default function AlertsScreen() {
 }
 
 const s = StyleSheet.create({
-  root:     { flex: 1, backgroundColor: C.bg },
-  topBar:   { backgroundColor: C.surface, paddingHorizontal: SP.lg, paddingTop: SP.md, paddingBottom: SP.lg },
-  appTitle: { color: C.text, fontWeight: '800' },
-
-  card:      { marginHorizontal: SP.lg, marginBottom: SP.md, backgroundColor: C.surface, borderRadius: SHAPE.xl },
+  root:      { flex: 1 },
+  topBar:    { paddingHorizontal: SP.lg, paddingTop: SP.md, paddingBottom: SP.lg },
+  appTitle:  { fontWeight: '800' },
+  card:      { marginHorizontal: SP.lg, marginBottom: SP.md, borderRadius: SHAPE.xl },
   cardHead:  { flexDirection: 'row', alignItems: 'center', gap: SP.sm, marginBottom: SP.lg },
-  cardTitle: { color: C.text, fontWeight: '700', flex: 1 },
-
-  fieldLabel: { color: C.text3, marginBottom: SP.sm, marginTop: SP.xs },
-  vegChip:    { borderRadius: SHAPE.full },
-  input:      { backgroundColor: C.surface2, marginBottom: SP.lg },
-  createBtn:  { borderRadius: SHAPE.lg },
-
-  countBadge: { backgroundColor: `${C.primary}20`, borderRadius: SHAPE.full, paddingHorizontal: SP.sm, paddingVertical: 2 },
+  cardTitle: { fontWeight: '700', flex: 1 },
+  fieldLabel: { marginBottom: SP.sm, marginTop: SP.xs },
+  vegChip:   { borderRadius: SHAPE.full },
+  input:     { marginBottom: SP.lg },
+  createBtn: { borderRadius: SHAPE.lg },
+  countBadge: { borderRadius: SHAPE.full, paddingHorizontal: SP.sm, paddingVertical: 2 },
   emptyState: { alignItems: 'center', paddingVertical: SP.xxl },
   alertIcon:  { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginRight: SP.xs },
 });

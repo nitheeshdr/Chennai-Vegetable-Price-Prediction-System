@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from 'react-native-paper';
+import { useC } from '../context/ThemeContext';
 
 import HomeScreen     from '../screens/HomeScreen';
 import ScanScreen     from '../screens/ScanScreen';
@@ -13,7 +13,7 @@ import AlertsScreen   from '../screens/AlertsScreen';
 import ResultScreen   from '../screens/ResultScreen';
 import ForecastScreen from '../screens/ForecastScreen';
 import AdminScreen    from '../screens/AdminScreen';
-import { C } from '../theme';
+import { SP } from '../theme';
 
 const Tab   = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -28,16 +28,9 @@ const TAB_ICONS: Record<TabName, [string, string]> = {
   Admin:  ['cog', 'cog-outline'],
 };
 
-const HEADER_OPTS = {
-  headerStyle:       { backgroundColor: C.surface, borderBottomWidth: 0 } as any,
-  headerTintColor:   C.text,
-  headerTitleStyle:  { fontWeight: '700' as const, color: C.text, fontSize: 16 },
-  headerShadowVisible: false,
-};
-
 function TabIcon({ name, focused, color }: { name: TabName; focused: boolean; color: string }) {
+  const C = useC();
   const [active, inactive] = TAB_ICONS[name];
-  const icon = focused ? active : inactive;
   return (
     <View style={{
       alignItems: 'center', justifyContent: 'center',
@@ -45,12 +38,20 @@ function TabIcon({ name, focused, color }: { name: TabName; focused: boolean; co
       borderRadius: 16, paddingHorizontal: 20, paddingVertical: 4,
       minWidth: 64,
     }}>
-      <MaterialCommunityIcons name={icon as any} size={24} color={color} />
+      <MaterialCommunityIcons name={(focused ? active : inactive) as any} size={24} color={color} />
     </View>
   );
 }
 
 function MainTabs() {
+  const C = useC();
+  const headerOpts = {
+    headerStyle:       { backgroundColor: C.surface, borderBottomWidth: 0 } as any,
+    headerTintColor:   C.text,
+    headerTitleStyle:  { fontWeight: '700' as const, color: C.text, fontSize: 16 },
+    headerShadowVisible: false,
+  };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -69,7 +70,7 @@ function MainTabs() {
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' as const, marginTop: 2 },
         tabBarIconStyle:  { marginBottom: 0 },
-        ...HEADER_OPTS,
+        ...headerOpts,
       })}
     >
       <Tab.Screen name="Home"   component={HomeScreen}   options={{ title: 'VegPrice',  headerShown: false }} />
@@ -82,12 +83,19 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
+  const C = useC();
+  const headerOpts = {
+    headerStyle:       { backgroundColor: C.surface, borderBottomWidth: 0 } as any,
+    headerTintColor:   C.text,
+    headerTitleStyle:  { fontWeight: '700' as const, color: C.text, fontSize: 16 },
+    headerShadowVisible: false,
+  };
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main"     component={MainTabs} />
-        <Stack.Screen name="Result"   component={ResultScreen}   options={{ headerShown: true, title: 'Scan Result',      ...HEADER_OPTS }} />
-        <Stack.Screen name="Forecast" component={ForecastScreen} options={{ headerShown: true, title: 'Price Forecast',   ...HEADER_OPTS }} />
+        <Stack.Screen name="Result"   component={ResultScreen}   options={{ headerShown: true, title: 'Scan Result',    ...headerOpts }} />
+        <Stack.Screen name="Forecast" component={ForecastScreen} options={{ headerShown: true, title: 'Price Forecast', ...headerOpts }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
