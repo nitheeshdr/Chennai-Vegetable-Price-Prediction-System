@@ -1,0 +1,115 @@
+\documentclass[tikz,border=10pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,backgrounds,shadows}
+\usepackage{xcolor}
+
+% Brand Colors
+\definecolor{primary}{HTML}{6366F1}
+\definecolor{secondary}{HTML}{3ECFCF}
+\definecolor{accent}{HTML}{FF6584}
+\definecolor{dark}{HTML}{13131C}
+\definecolor{green}{HTML}{A8F0C6}
+\definecolor{amber}{HTML}{F5C842}
+\definecolor{surface}{HTML}{1E1E2E}
+\definecolor{lightprimary}{HTML}{BBC2FF}
+
+\tikzset{
+  layer/.style={
+    rectangle, rounded corners=8pt,
+    minimum width=3.2cm, minimum height=1cm,
+    text centered, font=\bfseries\small,
+    drop shadow,
+  },
+  mobile/.style={layer, fill=primary, text=white},
+  api/.style={layer, fill=secondary!80!black, text=white},
+  ml/.style={layer, fill=accent!80!black, text=white},
+  db/.style={layer, fill=dark, text=white, draw=primary, line width=1pt},
+  ext/.style={layer, fill=surface, text=white, draw=secondary, line width=1pt, dashed},
+  arrow/.style={-Stealth, thick, color=primary!70},
+  doublearrow/.style={Stealth-Stealth, thick, color=secondary!70},
+  label/.style={font=\tiny\itshape, color=gray},
+}
+
+\begin{document}
+\begin{tikzpicture}[node distance=1.8cm and 2.2cm]
+
+% ── Row 1: Mobile App ─────────────────────────────────────────────────────────
+\node[mobile] (home)     {Home Screen};
+\node[mobile, right=1.2cm of home] (scan)  {Scan Screen};
+\node[mobile, right=1.2cm of scan] (trends){Trends Screen};
+\node[mobile, right=1.2cm of trends](alerts){Alerts Screen};
+\node[mobile, right=1.2cm of alerts](forecast){Forecast Screen};
+
+\begin{scope}[on background layer]
+  \node[fit=(home)(forecast), fill=primary!10, rounded corners=12pt,
+        draw=primary, line width=1.5pt, inner sep=14pt,
+        label={[font=\footnotesize\bfseries, text=primary]above:React Native Mobile App (Expo SDK 54)}] (mobileBox) {};
+\end{scope}
+
+% ── Row 2: API Layer ───────────────────────────────────────────────────────────
+\node[api, below=2.2cm of home] (vercel)  {Vercel\\\footnotesize serverless};
+\node[api, right=1.2cm of vercel] (fastapi){FastAPI\\\footnotesize uvicorn};
+\node[api, right=1.2cm of fastapi] (redis) {Redis\\\footnotesize cache};
+\node[api, right=1.2cm of redis]   (ratelimit){Rate Limiter\\\footnotesize slowapi};
+\node[api, right=1.2cm of ratelimit](prometheus){Prometheus\\\footnotesize metrics};
+
+\begin{scope}[on background layer]
+  \node[fit=(vercel)(prometheus), fill=secondary!10, rounded corners=12pt,
+        draw=secondary, line width=1.5pt, inner sep=14pt,
+        label={[font=\footnotesize\bfseries, text=secondary!80!black]above:API Gateway \& Backend}] (apiBox) {};
+\end{scope}
+
+% ── Row 3: ML Pipeline ────────────────────────────────────────────────────────
+\node[ml, below=2.2cm of vercel] (xgb)  {XGBoost};
+\node[ml, right=1.2cm of xgb]   (lgbm) {LightGBM};
+\node[ml, right=1.2cm of lgbm]  (prophet){Prophet};
+\node[ml, right=1.2cm of prophet](ensemble){Ensemble\\\footnotesize weighted};
+\node[ml, right=1.2cm of ensemble](nvidia){NVIDIA NIM\\\footnotesize LLM};
+
+\begin{scope}[on background layer]
+  \node[fit=(xgb)(nvidia), fill=accent!10, rounded corners=12pt,
+        draw=accent, line width=1.5pt, inner sep=14pt,
+        label={[font=\footnotesize\bfseries, text=accent!80!black]above:ML \& AI Prediction Engine}] (mlBox) {};
+\end{scope}
+
+% ── Row 4: Data Layer ─────────────────────────────────────────────────────────
+\node[db, below=2.2cm of xgb]  (supabase){Supabase\\\footnotesize PostgreSQL};
+\node[db, right=1.2cm of supabase](models){Model Artifacts\\\footnotesize .pkl files};
+
+\begin{scope}[on background layer]
+  \node[fit=(supabase)(models), fill=dark!80, rounded corners=12pt,
+        draw=primary, line width=1.5pt, inner sep=14pt,
+        label={[font=\footnotesize\bfseries, text=lightprimary]above:Data \& Storage Layer}] (dbBox) {};
+\end{scope}
+
+% ── Row 5: External Services ──────────────────────────────────────────────────
+\node[ext, below=2.2cm of supabase] (openmeteo){Open-Meteo\\\footnotesize Weather API};
+\node[ext, right=1.2cm of openmeteo](mandi){Mandi API\\\footnotesize Price Data};
+\node[ext, right=1.2cm of mandi]    (fcm){Firebase\\\footnotesize Push Notifications};
+
+\begin{scope}[on background layer]
+  \node[fit=(openmeteo)(fcm), fill=surface, rounded corners=12pt,
+        draw=secondary, line width=1pt, dashed, inner sep=14pt,
+        label={[font=\footnotesize\bfseries, text=secondary]above:External Services}] (extBox) {};
+\end{scope}
+
+% ── Arrows: Mobile → API ──────────────────────────────────────────────────────
+\draw[arrow] (mobileBox.south) -- node[label, right]{REST / JSON} (apiBox.north);
+
+% ── Arrows: API → ML ──────────────────────────────────────────────────────────
+\draw[arrow] (apiBox.south) -- node[label, right]{predict()} (mlBox.north);
+
+% ── Arrows: ML → Data ─────────────────────────────────────────────────────────
+\draw[arrow] (mlBox.south) -- node[label, right]{read/write} (dbBox.north);
+
+% ── Arrows: Data → External ───────────────────────────────────────────────────
+\draw[arrow] (dbBox.south) -- node[label, right]{fetch} (extBox.north);
+
+% ── Bidirectional: API ↔ Supabase ─────────────────────────────────────────────
+\draw[doublearrow, bend left=35] (fastapi.east) to node[label, right]{REST API} ($(supabase.north)+(2,0)$);
+
+% ── NVIDIA NIM external ────────────────────────────────────────────────────────
+\draw[arrow, dashed, color=accent] (nvidia.east) -- ++(1.2,0) node[ext, anchor=west, minimum width=2.4cm]{NVIDIA\\\footnotesize NIM Cloud};
+
+\end{tikzpicture}
+\end{document}
