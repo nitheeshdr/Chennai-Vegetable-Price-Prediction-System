@@ -159,3 +159,92 @@ class DashboardResponse(BaseModel):
     top_rising: list[dict] = Field(..., description="Top vegetables with the highest predicted price increase today")
     top_falling: list[dict] = Field(..., description="Top vegetables with the highest predicted price decrease today")
     all_predictions: list[PredictionResponse] = Field(..., description="Next-day predictions for all tracked vegetables")
+
+
+# ── Weather ───────────────────────────────────────────────────────────────────
+class WeatherResponse(BaseModel):
+    city: str = Field(..., description="City name", examples=["Chennai"])
+    temperature_c: float = Field(..., description="Current temperature in Celsius", examples=[34.2])
+    humidity_pct: int = Field(..., description="Relative humidity (%)", examples=[72])
+    wind_speed_kmh: float = Field(..., description="Wind speed in km/h", examples=[18.5])
+    precipitation_mm: float = Field(..., description="Precipitation in the last hour (mm)", examples=[0.0])
+    condition: str = Field(..., description="Human-readable weather condition", examples=["Partly Cloudy"])
+    weather_impact: str = Field(
+        ...,
+        description="Estimated impact of current weather on vegetable prices",
+        examples=["High humidity may increase perishable prices slightly"],
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "city": "Chennai",
+                    "temperature_c": 34.2,
+                    "humidity_pct": 72,
+                    "wind_speed_kmh": 18.5,
+                    "precipitation_mm": 0.0,
+                    "condition": "Partly Cloudy",
+                    "weather_impact": "High humidity may increase perishable prices slightly",
+                }
+            ]
+        }
+    }
+
+
+# ── Vegetables list ───────────────────────────────────────────────────────────
+class VegetableInfo(BaseModel):
+    name: str = Field(..., description="Canonical vegetable name (snake_case)", examples=["tomato"])
+    aliases: list[str] = Field(..., description="Alternative names used in datasets", examples=[["Tomato", "TOMATO"]])
+    unit: str = Field(..., description="Unit of measurement", examples=["kg"])
+    typical_price_min: float = Field(..., description="Typical minimum price (Rs/unit)", examples=[10.0])
+    typical_price_max: float = Field(..., description="Typical maximum price (Rs/unit)", examples=[120.0])
+
+
+class VegetablesListResponse(BaseModel):
+    total: int = Field(..., description="Total number of supported vegetables", examples=[20])
+    vegetables: list[VegetableInfo] = Field(..., description="List of all supported vegetables with metadata")
+
+
+# ── AI prediction ─────────────────────────────────────────────────────────────
+class AIPredictionResponse(BaseModel):
+    vegetable: str = Field(..., description="Vegetable name", examples=["tomato"])
+    prediction_date: str = Field(..., description="Date for which the price is predicted (YYYY-MM-DD)", examples=["2026-04-19"])
+    predicted_price: float = Field(..., description="AI-predicted price (Rs/kg)", examples=[52.0])
+    reasoning: str = Field(..., description="Natural-language explanation from the AI model", examples=["Based on seasonal trends and recent rainfall, tomato prices are expected to rise."])
+    model: str = Field(..., description="AI model used for this prediction", examples=["meta/llama-3.1-8b-instruct"])
+    factors_considered: list[str] = Field(..., description="Key factors the AI considered", examples=[["seasonality", "rainfall", "supply-demand"]])
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "vegetable": "tomato",
+                    "prediction_date": "2026-04-19",
+                    "predicted_price": 52.0,
+                    "reasoning": "Based on seasonal patterns and current weather conditions, tomato supply may tighten.",
+                    "model": "meta/llama-3.1-8b-instruct",
+                    "factors_considered": ["seasonality", "weather", "historical_trends"],
+                }
+            ]
+        }
+    }
+
+
+# ── Price history ─────────────────────────────────────────────────────────────
+class PriceHistoryEntry(BaseModel):
+    date: str = Field(..., description="Date of the price record (YYYY-MM-DD)", examples=["2026-04-18"])
+    market_name: Optional[str] = Field(None, description="Market name", examples=["koyambedu"])
+    min_price: Optional[float] = Field(None, description="Minimum price on that date (Rs/kg)", examples=[38.0])
+    max_price: Optional[float] = Field(None, description="Maximum price on that date (Rs/kg)", examples=[55.0])
+    modal_price: float = Field(..., description="Modal (most common) price (Rs/kg)", examples=[45.0])
+
+
+class PriceHistoryResponse(BaseModel):
+    vegetable: str = Field(..., description="Vegetable name (snake_case)", examples=["tomato"])
+    market: Optional[str] = Field(None, description="Market filter applied, or null for all markets", examples=["koyambedu"])
+    days: int = Field(..., description="Number of days of history returned", examples=[30])
+    records: list[PriceHistoryEntry] = Field(..., description="Historical price records ordered newest first")
+    avg_modal_price: float = Field(..., description="Average modal price over the period (Rs/kg)", examples=[43.5])
+    min_modal_price: float = Field(..., description="Lowest modal price in the period (Rs/kg)", examples=[30.0])
+    max_modal_price: float = Field(..., description="Highest modal price in the period (Rs/kg)", examples=[65.0])

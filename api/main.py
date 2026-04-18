@@ -32,6 +32,7 @@ from slowapi.errors import RateLimitExceeded
 
 from api.config import settings
 from api.routers import predictions, vision, prices, forecast, alerts, analytics
+from api.routers import weather, vegetables, ai_predict, price_history
 
 # ── Rate limiter ──────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address)
@@ -83,6 +84,25 @@ tags_metadata = [
     {
         "name": "analytics",
         "description": "Aggregated dashboard stats: top rising/falling vegetables and all predictions.",
+    },
+    {
+        "name": "weather",
+        "description": (
+            "Live Chennai weather data from Open-Meteo, including a plain-language "
+            "commentary on how current conditions may affect vegetable prices."
+        ),
+    },
+    {
+        "name": "vegetables",
+        "description": "Catalogue of all vegetables tracked by VegPrice AI, with aliases and typical price ranges.",
+    },
+    {
+        "name": "ai-predictions",
+        "description": (
+            "AI-powered price predictions using **NVIDIA NIM** (Llama 3.1). "
+            "Returns a natural-language explanation alongside the predicted price. "
+            "Requires `NVIDIA_API_KEY` in the server environment."
+        ),
     },
     {
         "name": "health",
@@ -147,11 +167,15 @@ Instrumentator().instrument(app).expose(app)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(predictions.router)
+app.include_router(ai_predict.router)
 app.include_router(vision.router)
 app.include_router(prices.router)
+app.include_router(price_history.router)
 app.include_router(forecast.router)
 app.include_router(alerts.router)
 app.include_router(analytics.router)
+app.include_router(weather.router)
+app.include_router(vegetables.router)
 
 
 # ── Health check ──────────────────────────────────────────────────────────────
@@ -175,9 +199,20 @@ async def health():
 )
 async def root():
     return {
-        "message": "Chennai Vegetable Price Prediction API",
+        "message": "VegPrice AI — Chennai Vegetable Price Prediction API",
         "docs": "/docs",
         "health": "/health",
+        "endpoints": {
+            "vegetables": "/vegetables",
+            "weather": "/weather",
+            "predict": "/predict?vegetable=tomato",
+            "ai_predict": "/ai-predict?vegetable=tomato",
+            "current_price": "/get-current-price?vegetable=tomato",
+            "market_comparison": "/get-current-price/market-comparison?vegetable=tomato",
+            "weekly_forecast": "/weekly-forecast?vegetable=tomato",
+            "price_history": "/price-history?vegetable=tomato&days=30",
+            "dashboard": "/dashboard",
+        },
     }
 
 

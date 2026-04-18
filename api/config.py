@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # FCM push notifications
     fcm_server_key: str = ""
 
+    # NVIDIA NIM (AI predictions)
+    nvidia_api_key: str = ""
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
