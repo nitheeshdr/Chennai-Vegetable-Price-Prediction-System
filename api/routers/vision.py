@@ -12,8 +12,21 @@ ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_SIZE_MB = 10
 
 
-@router.post("", response_model=ScanResponse)
-async def scan_vegetable_image(file: UploadFile = File(...)):
+@router.post(
+    "",
+    response_model=ScanResponse,
+    summary="Identify vegetable from image",
+    description=(
+        "Upload a photo of a vegetable (JPEG, PNG, or WebP, max **10 MB**). "
+        "A YOLOv8 vision model identifies the vegetable and the response includes:\n\n"
+        "- Top-K classification results with confidence scores\n"
+        "- Current market price (if available)\n"
+        "- Next-day price prediction (if a trained model exists)\n\n"
+        "**Content-Type must be** `multipart/form-data`."
+    ),
+    response_description="Detected vegetable with confidence scores, current price, and next-day prediction",
+)
+async def scan_vegetable_image(file: UploadFile = File(..., description="Vegetable image file (JPEG/PNG/WebP, max 10 MB)")):
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=400, detail=f"Unsupported image type: {file.content_type}")
 
@@ -21,7 +34,6 @@ async def scan_vegetable_image(file: UploadFile = File(...)):
     if len(image_bytes) > MAX_SIZE_MB * 1024 * 1024:
         raise HTTPException(status_code=413, detail=f"Image too large (max {MAX_SIZE_MB}MB)")
 
-    # Identify vegetable
     vision_result = await identify_vegetable(image_bytes)
     vegetable = vision_result.get("top_prediction", "unknown")
 

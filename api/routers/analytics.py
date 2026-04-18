@@ -21,7 +21,20 @@ def _load_vegetable_names() -> list[str]:
     return [v["name"] for v in cfg["vegetables"]]
 
 
-@router.get("", response_model=DashboardResponse)
+@router.get(
+    "",
+    response_model=DashboardResponse,
+    summary="Get analytics dashboard",
+    description=(
+        "Returns an aggregated snapshot of the current market:\n\n"
+        "- Total vegetables and markets tracked\n"
+        "- Top 5 vegetables with the highest predicted price **increase** today\n"
+        "- Top 5 vegetables with the highest predicted price **decrease** today\n"
+        "- Next-day predictions for all tracked vegetables\n\n"
+        "Data is computed on-the-fly from the latest ML predictions."
+    ),
+    response_description="Dashboard summary with rising/falling vegetables and all predictions",
+)
 async def dashboard():
     vegetables = _load_vegetable_names()
     predictions: list[PredictionResponse] = []

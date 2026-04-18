@@ -46,14 +46,86 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down VegPrice API")
 
 
+# ── OpenAPI tag metadata ──────────────────────────────────────────────────────
+tags_metadata = [
+    {
+        "name": "predictions",
+        "description": (
+            "ML-powered next-day price predictions for vegetables in Chennai markets. "
+            "Uses an ensemble of XGBoost, LightGBM, and Prophet models."
+        ),
+    },
+    {
+        "name": "vision",
+        "description": (
+            "Scan a vegetable image (JPEG/PNG/WebP, max 10 MB) using a YOLOv8 model "
+            "to identify the vegetable and instantly fetch its current price and prediction."
+        ),
+    },
+    {
+        "name": "prices",
+        "description": (
+            "Retrieve the latest recorded market prices for a vegetable, "
+            "optionally filtered by market, and compare prices across all tracked markets."
+        ),
+    },
+    {
+        "name": "forecast",
+        "description": "7-day price forecast for a vegetable, powered by the same ML ensemble.",
+    },
+    {
+        "name": "alerts",
+        "description": (
+            "Create, list, and delete price-threshold alerts. "
+            "Push notifications are sent via FCM when the threshold is crossed."
+        ),
+    },
+    {
+        "name": "analytics",
+        "description": "Aggregated dashboard stats: top rising/falling vegetables and all predictions.",
+    },
+    {
+        "name": "health",
+        "description": "Health and liveness probes.",
+    },
+]
+
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="Chennai Vegetable Price Prediction API",
+    title="VegPrice AI — Chennai Vegetable Price Prediction API",
     description=(
-        "Predict next-day vegetable prices in Chennai, scan vegetable images, "
-        "get price trends and market comparisons."
+        "## Overview\n\n"
+        "**VegPrice AI** predicts next-day vegetable prices across Chennai markets "
+        "using an ML ensemble (XGBoost · LightGBM · Prophet) trained on historical "
+        "APMC price data.\n\n"
+        "### Key features\n"
+        "- 📈 **Price predictions** — next-day & 7-day forecasts with confidence intervals\n"
+        "- 📷 **Vision scan** — identify a vegetable from a photo and get its live price\n"
+        "- 🏪 **Market comparison** — compare prices across Koyambedu, Parrys, and more\n"
+        "- 🔔 **Price alerts** — FCM push notifications when a threshold is crossed\n"
+        "- 📊 **Dashboard** — top rising/falling vegetables at a glance\n\n"
+        "### Authentication\n"
+        "Most endpoints are public. Alert creation requires a valid `user_id` "
+        "(managed by Supabase Auth on the mobile client).\n\n"
+        "### Rate limiting\n"
+        "Requests are limited per IP. Exceeding the limit returns `429 Too Many Requests`."
     ),
     version="1.0.0",
+    contact={
+        "name": "VegPrice AI Team",
+        "email": "girishkrish17@gmail.com",
+    },
+    license_info={
+        "name": "MIT",
+    },
+    openapi_tags=tags_metadata,
+    swagger_ui_parameters={
+        "defaultModelsExpandDepth": 2,
+        "defaultModelExpandDepth": 3,
+        "docExpansion": "list",
+        "filter": True,
+        "tryItOutEnabled": True,
+    },
     lifespan=lifespan,
 )
 
@@ -83,12 +155,24 @@ app.include_router(analytics.router)
 
 
 # ── Health check ──────────────────────────────────────────────────────────────
-@app.get("/health", tags=["health"])
+@app.get(
+    "/health",
+    tags=["health"],
+    summary="Health check",
+    description="Returns `200 OK` when the API process is running. Use this as a liveness probe.",
+    response_description="Service status and active environment name",
+)
 async def health():
     return {"status": "ok", "environment": settings.environment}
 
 
-@app.get("/", tags=["health"])
+@app.get(
+    "/",
+    tags=["health"],
+    summary="API root",
+    description="Returns a welcome message and links to the interactive docs and health endpoint.",
+    response_description="Welcome message with useful links",
+)
 async def root():
     return {
         "message": "Chennai Vegetable Price Prediction API",
