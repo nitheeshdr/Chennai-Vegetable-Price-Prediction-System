@@ -46,10 +46,12 @@ def _build_user_prompt(vegetable: str, prediction_date: str) -> str:
         "regional supply dynamics, and market context.\n\n"
         "Unlike the `/predict` endpoint (pure ML ensemble), this endpoint reasons "
         "over qualitative factors and explains its prediction in plain English.\n\n"
-        "**Requires** `NVIDIA_API_KEY` to be set in the server environment.\n\n"
+        "**Requires** an NVIDIA NIM API key — click the **Authorize 🔓** button at the "
+        "top of the docs page and enter your key under `NvidiaApiKey`.\n\n"
         "**Example:** `GET /ai-predict?vegetable=tomato`"
     ),
     response_description="AI-predicted price with natural-language reasoning and key factors",
+    openapi_extra={"security": [{"NvidiaApiKey": []}]},
 )
 async def ai_predict(
     vegetable: str = Query(..., description="Vegetable name (e.g. `tomato`, `onion`)", examples=["tomato"]),

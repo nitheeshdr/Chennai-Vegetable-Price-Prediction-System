@@ -23,7 +23,8 @@ os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -101,7 +102,7 @@ tags_metadata = [
         "description": (
             "AI-powered price predictions using **NVIDIA NIM** (Llama 3.1). "
             "Returns a natural-language explanation alongside the predicted price. "
-            "Requires `NVIDIA_API_KEY` in the server environment."
+            "Requires `NVIDIA_API_KEY` set via the Authorize button below."
         ),
     },
     {
@@ -110,7 +111,7 @@ tags_metadata = [
     },
 ]
 
-# ── App ───────────────────────────────────────────────────────────────────────
+# ── App (docs_url=None so we serve custom Swagger UI HTML) ────────────────────
 app = FastAPI(
     title="VegPrice AI — Chennai Vegetable Price Prediction API",
     description=(
@@ -125,8 +126,8 @@ app = FastAPI(
         "- 🔔 **Price alerts** — FCM push notifications when a threshold is crossed\n"
         "- 📊 **Dashboard** — top rising/falling vegetables at a glance\n\n"
         "### Authentication\n"
-        "Most endpoints are public. Alert creation requires a valid `user_id` "
-        "(managed by Supabase Auth on the mobile client).\n\n"
+        "Most endpoints are public. The `/ai-predict` endpoint requires an **NVIDIA NIM API key** — "
+        "click the **Authorize 🔓** button and paste your key under `NvidiaApiKey`.\n\n"
         "### Rate limiting\n"
         "Requests are limited per IP. Exceeding the limit returns `429 Too Many Requests`."
     ),
@@ -135,19 +136,196 @@ app = FastAPI(
         "name": "VegPrice AI Team",
         "email": "girishkrish17@gmail.com",
     },
-    license_info={
-        "name": "MIT",
-    },
+    license_info={"name": "MIT"},
     openapi_tags=tags_metadata,
-    swagger_ui_parameters={
-        "defaultModelsExpandDepth": 2,
-        "defaultModelExpandDepth": 3,
-        "docExpansion": "list",
-        "filter": True,
-        "tryItOutEnabled": True,
-    },
+    docs_url=None,   # serve custom Swagger UI below
+    redoc_url=None,
     lifespan=lifespan,
 )
+
+
+# ── Custom OpenAPI schema (adds security schemes) ─────────────────────────────
+def _custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        contact=app.contact,
+        license_info=app.license_info,
+        tags=tags_metadata,
+        routes=app.routes,
+    )
+    schema.setdefault("components", {})["securitySchemes"] = {
+        "NvidiaApiKey": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-NVIDIA-API-Key",
+            "description": "NVIDIA NIM API key — required for `/ai-predict`. "
+                           "Get one at https://build.nvidia.com",
+        },
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Supabase JWT — passed automatically by the mobile app for alert endpoints.",
+        },
+    }
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+app.openapi = _custom_openapi  # type: ignore[method-assign]
+
+
+# ── Custom Swagger UI HTML ────────────────────────────────────────────────────
+_SWAGGER_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VegPrice AI — API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css"/>
+  <style>
+    /* ── Brand colours ── */
+    :root {
+      --brand-green:   #2e7d32;
+      --brand-light:   #43a047;
+      --brand-accent:  #ff8f00;
+      --brand-bg:      #f1f8e9;
+      --header-height: 64px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fafafa; }
+
+    /* ── Top header bar ── */
+    #vegprice-header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 28px;
+      height: var(--header-height);
+      background: var(--brand-green);
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    #vegprice-header .logo { font-size: 28px; line-height: 1; }
+    #vegprice-header .brand-text h1 {
+      color: #fff;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+    #vegprice-header .brand-text p {
+      color: #c8e6c9;
+      font-size: 12px;
+      margin-top: 1px;
+    }
+    #vegprice-header .badge {
+      margin-left: auto;
+      background: var(--brand-accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      letter-spacing: .4px;
+    }
+
+    /* ── Swagger UI overrides ── */
+    .swagger-ui .topbar { display: none; }
+
+    .swagger-ui .info { margin: 24px 0 8px; }
+    .swagger-ui .info .title { color: var(--brand-green); font-size: 28px; }
+    .swagger-ui .info a { color: var(--brand-light); }
+
+    /* Tag section headers */
+    .swagger-ui .opblock-tag {
+      border-bottom: 2px solid var(--brand-green) !important;
+      color: var(--brand-green) !important;
+      font-size: 15px !important;
+      font-weight: 700 !important;
+    }
+
+    /* GET method colour */
+    .swagger-ui .opblock.opblock-get .opblock-summary-method { background: var(--brand-light) !important; }
+    /* POST */
+    .swagger-ui .opblock.opblock-post .opblock-summary-method { background: var(--brand-accent) !important; }
+    /* DELETE */
+    .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #c62828 !important; }
+
+    /* Authorize button */
+    .swagger-ui .btn.authorize {
+      border-color: var(--brand-green) !important;
+      color: var(--brand-green) !important;
+    }
+    .swagger-ui .btn.authorize svg { fill: var(--brand-green) !important; }
+
+    /* Execute button */
+    .swagger-ui .btn.execute { background: var(--brand-green) !important; border-color: var(--brand-green) !important; }
+
+    /* Filter bar */
+    .swagger-ui .filter-container { background: var(--brand-bg); border-radius: 6px; margin: 12px 0; }
+    .swagger-ui .filter-container .filter input { border-color: var(--brand-green); }
+
+    /* Model schema headers */
+    .swagger-ui .model-title { color: var(--brand-green); }
+
+    /* Response code 200 */
+    .swagger-ui .response-col_status .response-undocumented { color: #888; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: var(--brand-green); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Custom branded header -->
+<div id="vegprice-header">
+  <span class="logo">🥦</span>
+  <div class="brand-text">
+    <h1>VegPrice AI</h1>
+    <p>Chennai Vegetable Price Prediction API</p>
+  </div>
+  <span class="badge">v1.0.0</span>
+</div>
+
+<div id="swagger-ui"></div>
+
+<script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+<script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js"></script>
+<script>
+  window.onload = function () {
+    SwaggerUIBundle({
+      url: "/openapi.json",
+      dom_id: "#swagger-ui",
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+      plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+      layout: "StandaloneLayout",
+      deepLinking: true,
+      defaultModelsExpandDepth: 2,
+      defaultModelExpandDepth: 3,
+      docExpansion: "list",
+      filter: true,
+      tryItOutEnabled: true,
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      syntaxHighlight: { activate: true, theme: "nord" },
+    });
+  };
+</script>
+</body>
+</html>"""
+
+
+@app.get("/docs", include_in_schema=False)
+async def swagger_ui_html():
+    return HTMLResponse(_SWAGGER_HTML)
 
 # CORS
 app.add_middleware(
